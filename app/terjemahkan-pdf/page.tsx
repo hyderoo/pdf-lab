@@ -76,7 +76,7 @@ export default function TerjemahkanPdf() {
         <FileDrop accept="application/pdf" onFiles={(fs) => fs[0] && onFile(fs[0])} label="Pilih satu PDF untuk diterjemahkan" />
       ) : (
         <>
-          <p className="mb-4 text-sm text-slate-300">
+          <p className="mb-4 text-sm text-slate-600">
             {file.name} · {pageCount} halaman · {formatBytes(file.size)}
           </p>
           <div className="mb-4 max-w-xs">
@@ -86,7 +86,7 @@ export default function TerjemahkanPdf() {
               <option value="id">Bahasa Indonesia</option>
             </Select>
           </div>
-          <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/8 px-3 py-2 text-xs leading-relaxed text-amber-200">
+          <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
             Saat kamu menekan tombol di bawah, isi teks PDF ini diekstrak di browser lalu
             dikirim ke Google Gemini untuk diterjemahkan. Berkas PDF asli tidak pernah diunggah.
           </div>
@@ -104,7 +104,7 @@ export default function TerjemahkanPdf() {
 
       {translated && (
         <div className="mt-6">
-          <div className="max-h-[28rem] overflow-y-auto whitespace-pre-wrap rounded-xl border border-line bg-panel p-5 text-sm leading-relaxed text-slate-200">
+          <div className="max-h-[28rem] overflow-y-auto whitespace-pre-wrap rounded-xl border border-line bg-panel p-5 text-sm leading-relaxed text-slate-700">
             {translated}
           </div>
           <button

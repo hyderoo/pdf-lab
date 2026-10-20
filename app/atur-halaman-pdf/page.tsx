@@ -98,7 +98,7 @@ export default function AturHalamanPdf() {
         <FileDrop accept="application/pdf" onFiles={(fs) => fs[0] && onFile(fs[0])} label="Pilih satu PDF untuk diatur" />
       ) : (
         <>
-          <p className="mb-4 text-sm text-slate-300">
+          <p className="mb-4 text-sm text-slate-600">
             {file.name} · {entries.length} halaman · {formatBytes(file.size)}
           </p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5">
@@ -116,37 +116,37 @@ export default function AturHalamanPdf() {
                     <span className="text-[10px] text-slate-600">…</span>
                   )}
                 </div>
-                <p className="mt-1.5 text-center text-[11px] font-semibold text-slate-300">
+                <p className="mt-1.5 text-center text-[11px] font-semibold text-slate-600">
                   {i + 1}
                   {e.src !== null && e.src !== i && (
                     <span className="ml-1 font-normal text-slate-500">(asl: {e.src + 1})</span>
                   )}
                 </p>
                 <div className="mt-1 flex justify-center gap-0.5">
-                  <button onClick={() => move(i, -1)} title="Geser kiri" className="rounded p-1 text-slate-400 hover:bg-panel2">
+                  <button onClick={() => move(i, -1)} title="Geser kiri" className="rounded p-1 text-slate-500 hover:bg-panel2">
                     <ArrowLeft size={13} />
                   </button>
-                  <button onClick={() => move(i, 1)} title="Geser kanan" className="rounded p-1 text-slate-400 hover:bg-panel2">
+                  <button onClick={() => move(i, 1)} title="Geser kanan" className="rounded p-1 text-slate-500 hover:bg-panel2">
                     <ArrowRight size={13} />
                   </button>
                   <button
                     onClick={() => setEntries((prev) => [...prev.slice(0, i + 1), { id: nextId++, src: e.src }, ...prev.slice(i + 1)])}
                     title="Gandakan"
-                    className="rounded p-1 text-slate-400 hover:bg-panel2"
+                    className="rounded p-1 text-slate-500 hover:bg-panel2"
                   >
                     <Copy size={13} />
                   </button>
                   <button
                     onClick={() => setEntries((prev) => [...prev.slice(0, i + 1), { id: nextId++, src: null }, ...prev.slice(i + 1)])}
                     title="Sisipkan halaman kosong"
-                    className="rounded p-1 text-slate-400 hover:bg-panel2"
+                    className="rounded p-1 text-slate-500 hover:bg-panel2"
                   >
                     <FilePlus2 size={13} />
                   </button>
                   <button
                     onClick={() => setEntries((prev) => prev.filter((x) => x.id !== e.id))}
                     title="Hapus"
-                    className="rounded p-1 text-slate-400 hover:bg-panel2 hover:text-rose-400"
+                    className="rounded p-1 text-slate-500 hover:bg-panel2 hover:text-rose-600"
                   >
                     <Trash2 size={13} />
                   </button>

@@ -17,27 +17,27 @@ export default async function MasukPage({
   const { error } = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0a0f1a] px-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#101827] p-8 shadow-2xl">
+    <main className="flex min-h-screen items-center justify-center bg-ink px-4">
+      <div className="w-full max-w-md rounded-2xl border border-line bg-white p-8 shadow-2xl">
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600/15 text-blue-400">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10 text-accent">
             <GraduationCap size={26} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-100">{site.name}</h1>
-            <p className="text-sm text-slate-400">{site.tagline}</p>
+            <h1 className="text-xl font-bold text-slate-800">{site.name}</h1>
+            <p className="text-sm text-slate-500">{site.tagline}</p>
           </div>
         </div>
 
         {error === "AccessDenied" && (
-          <div className="mb-5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+          <div className="mb-5 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             Email yang kamu pakai bukan email Undip. Masuk dengan email
             @undip.ac.id, @live.undip.ac.id, @student.undip.ac.id,
             @students.undip.ac.id, atau @alumni.undip.ac.id.
           </div>
         )}
 
-        <p className="mb-5 text-sm leading-relaxed text-slate-400">
+        <p className="mb-5 text-sm leading-relaxed text-slate-500">
           Khusus sivitas Undip: mahasiswa, dosen, staf, dan alumni. Masuk
           dengan email Undip kamu.
         </p>
@@ -51,7 +51,7 @@ export default async function MasukPage({
           >
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-3 rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-500"
+              className="flex w-full items-center justify-center gap-3 rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-accent-soft"
             >
               Masuk dengan Google
             </button>
@@ -64,7 +64,7 @@ export default async function MasukPage({
           >
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-700 bg-slate-800/60 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
+              className="flex w-full items-center justify-center gap-3 rounded-lg border border-line bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-panel2"
             >
               Masuk dengan Microsoft
             </button>
@@ -73,18 +73,18 @@ export default async function MasukPage({
 
         <div className="mt-6 space-y-2 text-xs leading-relaxed text-slate-500">
           <p className="flex items-start gap-2">
-            <ShieldCheck size={14} className="mt-0.5 shrink-0 text-emerald-400" />
+            <ShieldCheck size={14} className="mt-0.5 shrink-0 text-emerald-600" />
             Email mahasiswa SSO (@students) dan alumni (@alumni) pakai tombol
             Microsoft; email @student, @undip.ac.id, dan @live pakai Google.
           </p>
           <p className="flex items-start gap-2">
-            <FileLock2 size={14} className="mt-0.5 shrink-0 text-emerald-400" />
+            <FileLock2 size={14} className="mt-0.5 shrink-0 text-emerald-600" />
             Semua berkas diproses di browser kamu dan tidak pernah diunggah ke
             server. Server hanya memeriksa email saat masuk.
           </p>
         </div>
 
-        <p className="mt-6 border-t border-slate-800 pt-4 text-center text-[11px] text-slate-600">
+        <p className="mt-6 border-t border-line pt-4 text-center text-[11px] text-slate-600">
           {site.disclaimer}
         </p>
       </div>

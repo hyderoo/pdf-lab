@@ -74,7 +74,7 @@ export default function BandingkanPdf() {
         <div>
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Versi lama</p>
           {fileA ? (
-            <p className="rounded-lg border border-line bg-panel px-3 py-2.5 text-sm text-slate-200">
+            <p className="rounded-lg border border-line bg-panel px-3 py-2.5 text-sm text-slate-700">
               {fileA.name} <span className="text-xs text-slate-500">({formatBytes(fileA.size)})</span>
             </p>
           ) : (
@@ -84,7 +84,7 @@ export default function BandingkanPdf() {
         <div>
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Versi baru</p>
           {fileB ? (
-            <p className="rounded-lg border border-line bg-panel px-3 py-2.5 text-sm text-slate-200">
+            <p className="rounded-lg border border-line bg-panel px-3 py-2.5 text-sm text-slate-700">
               {fileB.name} <span className="text-xs text-slate-500">({formatBytes(fileB.size)})</span>
             </p>
           ) : (
@@ -107,10 +107,10 @@ export default function BandingkanPdf() {
 
       {diff && stats && (
         <div className="mt-6">
-          <p className="mb-3 text-sm text-slate-300">
-            <span className="font-semibold text-emerald-400">{stats.added} kalimat ditambah</span>
+          <p className="mb-3 text-sm text-slate-600">
+            <span className="font-semibold text-emerald-600">{stats.added} kalimat ditambah</span>
             {" · "}
-            <span className="font-semibold text-rose-400">{stats.removed} kalimat dihapus</span>
+            <span className="font-semibold text-rose-600">{stats.removed} kalimat dihapus</span>
             {stats.added === 0 && stats.removed === 0 && " — teks kedua PDF identik."}
           </p>
           <div className="max-h-[32rem] space-y-1 overflow-y-auto rounded-xl border border-line bg-panel p-4">
@@ -118,9 +118,9 @@ export default function BandingkanPdf() {
               d.kind === "same" ? (
                 <p key={i} className="text-xs leading-relaxed text-slate-500">{d.text}</p>
               ) : d.kind === "added" ? (
-                <p key={i} className="rounded bg-emerald-500/10 px-2 py-1 text-xs leading-relaxed text-emerald-300">+ {d.text}</p>
+                <p key={i} className="rounded bg-emerald-50 px-2 py-1 text-xs leading-relaxed text-emerald-700">+ {d.text}</p>
               ) : (
-                <p key={i} className="rounded bg-rose-500/10 px-2 py-1 text-xs leading-relaxed text-rose-300 line-through">− {d.text}</p>
+                <p key={i} className="rounded bg-rose-50 px-2 py-1 text-xs leading-relaxed text-rose-700 line-through">− {d.text}</p>
               )
             )}
           </div>

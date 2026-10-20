@@ -67,7 +67,7 @@ export default function PutarPdf() {
         <FileDrop accept="application/pdf" onFiles={(fs) => fs[0] && onFile(fs[0])} label="Pilih satu PDF untuk diputar" />
       ) : (
         <>
-          <p className="mb-4 text-sm text-slate-300">
+          <p className="mb-4 text-sm text-slate-600">
             {file.name} · {pageCount} halaman · {formatBytes(file.size)}
           </p>
           <div className="mb-4 grid gap-4 sm:grid-cols-2">

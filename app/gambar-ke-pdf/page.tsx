@@ -104,12 +104,12 @@ export default function GambarKePdf() {
         <ul className="mt-4 space-y-2">
           {files.map((f, i) => (
             <li key={`${f.name}-${i}`} className="flex items-center gap-2 rounded-lg border border-line bg-panel px-3 py-2">
-              <ImageIcon size={16} className="shrink-0 text-blue-400" />
-              <span className="min-w-0 flex-1 truncate text-sm text-slate-200">{i + 1}. {f.name}</span>
+              <ImageIcon size={16} className="shrink-0 text-accent" />
+              <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{i + 1}. {f.name}</span>
               <span className="text-xs text-slate-500">{formatBytes(f.size)}</span>
-              <button onClick={() => move(i, -1)} className="rounded p-1 text-slate-400 hover:bg-panel2" title="Naik"><ArrowUp size={15} /></button>
-              <button onClick={() => move(i, 1)} className="rounded p-1 text-slate-400 hover:bg-panel2" title="Turun"><ArrowDown size={15} /></button>
-              <button onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))} className="rounded p-1 text-slate-400 hover:bg-panel2 hover:text-rose-400" title="Hapus"><X size={15} /></button>
+              <button onClick={() => move(i, -1)} className="rounded p-1 text-slate-500 hover:bg-panel2" title="Naik"><ArrowUp size={15} /></button>
+              <button onClick={() => move(i, 1)} className="rounded p-1 text-slate-500 hover:bg-panel2" title="Turun"><ArrowDown size={15} /></button>
+              <button onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))} className="rounded p-1 text-slate-500 hover:bg-panel2 hover:text-rose-600" title="Hapus"><X size={15} /></button>
             </li>
           ))}
         </ul>

@@ -110,7 +110,7 @@ export default function WatermarkPdf() {
         <FileDrop accept="application/pdf" onFiles={(fs) => fs[0] && onFile(fs[0])} label="Pilih satu PDF" />
       ) : (
         <>
-          <p className="mb-4 text-sm text-slate-300">
+          <p className="mb-4 text-sm text-slate-600">
             {file.name} · {pageCount} halaman · {formatBytes(file.size)}
           </p>
           <div className="mb-4 grid gap-4 sm:grid-cols-3">
@@ -140,7 +140,7 @@ export default function WatermarkPdf() {
                     type="file"
                     accept="image/png,image/jpeg"
                     onChange={(e) => setImage(e.target.files?.[0] ?? null)}
-                    className="w-full rounded-lg border border-line bg-panel2 px-3 py-1.5 text-sm text-slate-300 file:mr-3 file:rounded file:border-0 file:bg-blue-600 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-white"
+                    className="w-full rounded-lg border border-line bg-panel2 px-3 py-1.5 text-sm text-slate-600 file:mr-3 file:rounded file:border-0 file:bg-accent file:px-3 file:py-1 file:text-xs file:font-semibold file:text-white"
                   />
                 </div>
                 <div>

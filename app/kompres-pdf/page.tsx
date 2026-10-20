@@ -76,7 +76,7 @@ export default function KompresPdf() {
         <FileDrop accept="application/pdf" onFiles={(fs) => fs[0] && onFile(fs[0])} label="Pilih satu PDF" />
       ) : (
         <>
-          <p className="mb-4 text-sm text-slate-300">
+          <p className="mb-4 text-sm text-slate-600">
             {file.name} · {pageCount} halaman · {formatBytes(file.size)}
           </p>
           <div className="mb-4 max-w-xs">
@@ -91,7 +91,7 @@ export default function KompresPdf() {
             <PrimaryButton onClick={run} busy={busy}>Kompres</PrimaryButton>
             <SecondaryButton onClick={() => { setFile(null); setResult(null); setError(""); }}>Ganti berkas</SecondaryButton>
           </div>
-          {progress && <p className="mt-3 text-xs text-slate-400">{progress}</p>}
+          {progress && <p className="mt-3 text-xs text-slate-500">{progress}</p>}
         </>
       )}
       <ErrorNote>{error}</ErrorNote>

@@ -135,7 +135,7 @@ export default function CropPdf() {
         <FileDrop accept="application/pdf" onFiles={(fs) => fs[0] && onFile(fs[0])} label="Pilih satu PDF" />
       ) : (
         <>
-          <p className="mb-4 text-sm text-slate-300">
+          <p className="mb-4 text-sm text-slate-600">
             {file.name} · {pageCount} halaman · {formatBytes(file.size)}
           </p>
           <div className="mb-3 grid gap-4 sm:grid-cols-2">
@@ -152,7 +152,7 @@ export default function CropPdf() {
               <TextInput value={range} onChange={(e) => setRange(e.target.value)} placeholder="mis. 1-5, 8" />
             </div>
           </div>
-          <p className="mb-2 text-xs text-slate-400">
+          <p className="mb-2 text-xs text-slate-500">
             Seret di atas gambar halaman untuk memilih area yang dipertahankan.
           </p>
           <div className="relative inline-block max-w-full overflow-hidden rounded-lg border border-line">
@@ -166,7 +166,7 @@ export default function CropPdf() {
             />
             {rect && canvasRef.current && (
               <div
-                className="pointer-events-none absolute border-2 border-blue-500 bg-blue-500/15"
+                className="pointer-events-none absolute border-2 border-accent bg-blue-500/15"
                 style={{
                   left: `${(rect.x / canvasRef.current.width) * 100}%`,
                   top: `${(rect.y / canvasRef.current.height) * 100}%`,

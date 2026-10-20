@@ -45,12 +45,12 @@ export default function FileDrop({
       }}
       className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-12 text-center transition ${
         dragging
-          ? "border-blue-500 bg-blue-600/10"
+          ? "border-accent bg-accent/5"
           : "border-line bg-panel hover:border-slate-600"
       }`}
     >
-      <UploadCloud size={34} className="mb-3 text-blue-400" />
-      <p className="text-sm font-semibold text-slate-200">{label}</p>
+      <UploadCloud size={34} className="mb-3 text-accent" />
+      <p className="text-sm font-semibold text-slate-700">{label}</p>
       {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
       <input
         ref={inputRef}

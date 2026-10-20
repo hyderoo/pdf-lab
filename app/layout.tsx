@@ -23,13 +23,13 @@ export const metadata: Metadata = {
 async function Header() {
   const session = await auth();
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-ink/85 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-line bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/15 text-blue-400">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 text-accent">
             <GraduationCap size={19} />
           </span>
-          <span className="text-[15px] font-bold tracking-tight text-slate-100">
+          <span className="text-[15px] font-bold tracking-tight text-slate-800">
             {site.name}
             <span className="ml-2 hidden text-[11px] font-medium text-slate-500 sm:inline">
               tidak resmi · oleh & untuk sivitas Undip
@@ -38,7 +38,7 @@ async function Header() {
         </Link>
         {session?.user && (
           <div className="flex items-center gap-3">
-            <span className="hidden max-w-55 truncate text-xs text-slate-400 sm:inline">
+            <span className="hidden max-w-55 truncate text-xs text-slate-500 sm:inline">
               {session.user.email}
             </span>
             <form
@@ -50,7 +50,7 @@ async function Header() {
               <button
                 type="submit"
                 title="Keluar"
-                className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-panel2"
+                className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-panel2"
               >
                 <LogOut size={13} /> Keluar
               </button>
@@ -58,6 +58,7 @@ async function Header() {
           </div>
         )}
       </div>
+    <div className="h-[3px] bg-accent" />
     </header>
   );
 }
