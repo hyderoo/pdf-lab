@@ -4,7 +4,7 @@ import { auth, signOut } from "@/auth";
 import { site } from "@/lib/site";
 import Link from "next/link";
 import { Suspense } from "react";
-import { GraduationCap, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -26,13 +26,12 @@ async function Header() {
     <header className="sticky top-0 z-20 border-b border-line bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 text-accent">
-            <GraduationCap size={19} />
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/undip-logo.png" alt="Logo Undip" className="h-8 w-auto" />
           <span className="text-[15px] font-bold tracking-tight text-slate-800">
             {site.name}
             <span className="ml-2 hidden text-[11px] font-medium text-slate-500 sm:inline">
-              tidak resmi · oleh & untuk sivitas Undip
+untuk sivitas Undip
             </span>
           </span>
         </Link>
@@ -75,8 +74,7 @@ export default function RootLayout({
         {children}
         <footer className="border-t border-line py-6">
           <div className="mx-auto max-w-6xl px-4 text-center text-xs leading-relaxed text-slate-500">
-            <p>{site.disclaimer}</p>
-            <p className="mt-1">
+            <p>
               Berkas diproses sepenuhnya di browser kamu — tidak ada berkas yang
               diunggah atau disimpan di server.
             </p>

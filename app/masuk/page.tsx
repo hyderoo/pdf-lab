@@ -1,7 +1,7 @@
 import { auth, signIn } from "@/auth";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { GraduationCap, ShieldCheck, FileLock2 } from "lucide-react";
+import { ShieldCheck, FileLock2 } from "lucide-react";
 import { site } from "@/lib/site";
 
 export const instant = false;
@@ -20,9 +20,8 @@ export default async function MasukPage({
     <main className="flex min-h-screen items-center justify-center bg-ink px-4">
       <div className="w-full max-w-md rounded-2xl border border-line bg-white p-8 shadow-2xl">
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10 text-accent">
-            <GraduationCap size={26} />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/undip-logo.png" alt="Logo Undip" className="h-11 w-auto" />
           <div>
             <h1 className="text-xl font-bold text-slate-800">{site.name}</h1>
             <p className="text-sm text-slate-500">{site.tagline}</p>
@@ -84,9 +83,6 @@ export default async function MasukPage({
           </p>
         </div>
 
-        <p className="mt-6 border-t border-line pt-4 text-center text-[11px] text-slate-600">
-          {site.disclaimer}
-        </p>
       </div>
     </main>
   );

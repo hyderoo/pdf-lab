@@ -3,8 +3,6 @@ export const site = {
   tagline: "Perkakas PDF untuk sivitas Undip",
   description:
     "Kumpulan alat PDF yang memproses berkas langsung di browser kamu. Gratis untuk sivitas Universitas Diponegoro.",
-  disclaimer:
-    "Proyek tidak resmi buatan alumni Universitas Diponegoro. Bukan layanan, produk, atau situs resmi Undip.",
   allowedDomains: [
     "undip.ac.id",
     "live.undip.ac.id",

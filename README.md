@@ -1,8 +1,6 @@
-# PDF Lab — PDF tools for the Undip community (unofficial)
+# PDF Lab — PDF tools for the Undip community
 
 A collection of PDF tools that run **entirely in your browser** — files are processed on your device and never uploaded to a server. Built by an Undip alumnus, for Undip students, staff, and alumni.
-
-> **Unofficial project.** Not a service, product, or website of Universitas Diponegoro. Inspired by the idea of a campus PDF toolbox; all design and code are original.
 
 ## Why it's different
 
