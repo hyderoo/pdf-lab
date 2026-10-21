@@ -291,9 +291,11 @@ export async function blocksToPdf(
       y -= lh;
     }
     if (b.kind === "heading") {
+      // y sits ~0.32*size below the last baseline; keep the rule there so
+      // it clears the text instead of cutting through it.
       page.drawLine({
-        start: { x: mL, y: y + size * 0.32 },
-        end: { x: pw - mR, y: y + size * 0.32 },
+        start: { x: mL, y: y + size * 0.04 },
+        end: { x: pw - mR, y: y + size * 0.04 },
         thickness: 0.6,
         color: rgb(0.8, 0.82, 0.85),
       });
