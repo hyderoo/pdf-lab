@@ -54,7 +54,10 @@ export async function exportPdfWithAnnotations(
       case "text": {
         const f = a.bold ? helvBold : helv;
         const size = a.size / S;
-        const lines = a.text.split("\n");
+        // pdf-lib standard fonts encode WinAnsi only; drop what it cannot draw.
+        const safe = (t: string) =>
+          t.replace(/[^\x20-\x7E\xA0-\xFF\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026]/g, " ");
+        const lines = safe(a.text).split("\n");
         lines.forEach((line, i) => {
           page.drawText(line, { x: X(a.x), y: Y(a.y) - size * (i + 0.85), size, font: f, color: col });
         });
