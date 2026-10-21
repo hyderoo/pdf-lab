@@ -1,5 +1,6 @@
 import {
   GitCompareArrows,
+  FilePenLine,
   Sparkles,
   Languages,
   FileImage,
@@ -23,7 +24,7 @@ export type Tool = {
   title: string;
   description: string;
   icon: LucideIcon;
-  category: "Analisis" | "Konversi ke PDF" | "Konversi dari PDF" | "Halaman" | "Video";
+  category: "Analisis" | "Edit" | "Konversi ke PDF" | "Konversi dari PDF" | "Halaman" | "Video";
   ai?: boolean;
 };
 
@@ -52,6 +53,14 @@ export const tools: Tool[] = [
     icon: Languages,
     category: "Analisis",
     ai: true,
+  },
+  {
+    slug: "edit-pdf",
+    title: "Edit PDF",
+    description:
+      "Tambahkan teks, highlight, coretan, bentuk, gambar, atau whiteout di atas PDF, lalu unduh hasilnya.",
+    icon: FilePenLine,
+    category: "Edit",
   },
   {
     slug: "gambar-ke-pdf",
