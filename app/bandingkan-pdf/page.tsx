@@ -111,7 +111,7 @@ export default function BandingkanPdf() {
             <span className="font-semibold text-emerald-600">{stats.added} kalimat ditambah</span>
             {" · "}
             <span className="font-semibold text-rose-600">{stats.removed} kalimat dihapus</span>
-            {stats.added === 0 && stats.removed === 0 && " — teks kedua PDF identik."}
+            {stats.added === 0 && stats.removed === 0 && " - teks kedua PDF identik."}
           </p>
           <div className="max-h-[32rem] space-y-1 overflow-y-auto rounded-xl border border-line bg-panel p-4">
             {diff.map((d, i) =>

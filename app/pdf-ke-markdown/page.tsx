@@ -34,7 +34,7 @@ export default function PdfKeMarkdown() {
       const doc = await loadPdfJsDoc(await file.arrayBuffer());
       const pages = await extractAllText(doc);
       const nonEmpty = pages.filter((p) => p.length > 0).length;
-      if (nonEmpty === 0) throw new Error("Tidak ada teks yang bisa diekstrak — PDF ini mungkin hasil scan tanpa OCR.");
+      if (nonEmpty === 0) throw new Error("Tidak ada teks yang bisa diekstrak - PDF ini mungkin hasil scan tanpa OCR.");
       const md = pages
         .map((t, i) => `<!-- Halaman ${i + 1} -->\n\n${t}\n`)
         .join("\n---\n\n");

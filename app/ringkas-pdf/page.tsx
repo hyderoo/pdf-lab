@@ -60,7 +60,7 @@ export default function RingkasPdf() {
 
   const download = async () => {
     if (!file || !summary) return;
-    const blob = await textToPdf(`Ringkasan — ${baseName(file.name)}`, summary);
+    const blob = await textToPdf(`Ringkasan - ${baseName(file.name)}`, summary);
     downloadBlob(blob, `${baseName(file.name)}-ringkasan.pdf`);
   };
 

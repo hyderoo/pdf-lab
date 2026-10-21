@@ -97,7 +97,7 @@ export default function GambarKePdf() {
         multiple
         onFiles={(fs) => { setFiles((prev) => [...prev, ...fs]); setResult(null); }}
         label="Tarik & letakkan gambar di sini, atau klik untuk memilih"
-        hint="JPG, PNG, WebP, HEIC — bisa banyak sekaligus"
+        hint="JPG, PNG, WebP, HEIC - bisa banyak sekaligus"
       />
 
       {files.length > 0 && (

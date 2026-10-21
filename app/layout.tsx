@@ -14,7 +14,7 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: `${site.name} — ${site.tagline}`,
+    default: `${site.name} - ${site.tagline}`,
     template: `%s · ${site.name}`,
   },
   description: site.description,
@@ -75,7 +75,7 @@ export default function RootLayout({
         <footer className="border-t border-line py-6">
           <div className="mx-auto max-w-6xl px-4 text-center text-xs leading-relaxed text-slate-500">
             <p>
-              Berkas diproses sepenuhnya di browser kamu — tidak ada berkas yang
+              Berkas diproses sepenuhnya di browser kamu - tidak ada berkas yang
               diunggah atau disimpan di server.
             </p>
           </div>
