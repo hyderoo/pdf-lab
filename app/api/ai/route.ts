@@ -3,6 +3,20 @@ import { NextResponse } from "next/server";
 
 const MAX_CHARS = 120_000;
 
+// Safety net: models sometimes still emit markdown despite the prompt.
+function stripMarkdown(s: string): string {
+  return s
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2")
+    .replace(/(^|[^_])_([^_\n]+)_/g, "$1$2")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
+    .replace(/^\s*[-*+]\s+/gm, "- ");
+}
+
+
 export async function POST(req: Request) {
   const session = await auth();
   if (!session) {
@@ -39,11 +53,16 @@ export async function POST(req: Request) {
     prompt =
       "Ringkas dokumen berikut dalam bahasa Indonesia yang jelas dan padat. " +
       "Gunakan struktur: 1 paragraf ringkasan utama, lalu poin-poin penting (maksimal 10), lalu satu paragraf kesimpulan. " +
-      "Jangan menambahkan informasi di luar dokumen.\n\nDOKUMEN:\n" + text;
+      "Tulis dalam teks polos: tanpa format markdown apa pun (tanpa **, *, _, #, atau backtick). " +
+      "Jangan menambah, mengarang, atau menyimpulkan informasi yang tidak ada di dokumen. " +
+      "Nama diri, nama merek, dan istilah asli harus disalin persis seperti tertulis; jangan diparafrasekan atau diganti padanannya.\n\nDOKUMEN:\n" + text;
   } else if (body.action === "translate") {
     const target = body.targetLang === "en" ? "bahasa Inggris" : "bahasa Indonesia";
     prompt =
       `Terjemahkan dokumen berikut ke ${target} dengan setia, pertahankan makna, istilah teknis, dan struktur per bagian. ` +
+      "Tulis dalam teks polos: tanpa format markdown apa pun (tanpa **, *, _, #, atau backtick). " +
+      "Pertahankan struktur baris, baris kosong antar bagian, dan poin-poin (tulis tiap poin sebagai baris yang diawali tanda minus) persis seperti dokumen asli. " +
+      "Nama diri, nama merek, nama produk, dan istilah jabatan tetap seperti aslinya, jangan diterjemahkan atau diparafrasekan. " +
       "Jangan menambahkan komentar apa pun selain hasil terjemahan.\n\nDOKUMEN:\n" + text;
   } else {
     return NextResponse.json({ error: "Aksi tidak dikenal." }, { status: 400 });
@@ -74,11 +93,12 @@ export async function POST(req: Request) {
   }
 
   const data = await resp.json();
-  const result =
+  const raw =
     data?.candidates?.[0]?.content?.parts
       ?.map((p: { text?: string }) => p.text ?? "")
       .join("")
       .trim() ?? "";
+  const result = stripMarkdown(raw);
   if (!result) {
     return NextResponse.json({ error: "AI tidak menghasilkan jawaban." }, { status: 502 });
   }

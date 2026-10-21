@@ -51,17 +51,56 @@ export async function renderPageCanvas(
   return canvas;
 }
 
+// Map symbol-font / private-use bullet glyphs (tofu boxes) and unicode
+// bullets to a plain "-", and odd spaces to regular spaces.
+function cleanGlyphs(s: string): string {
+  return s
+    .replace(/[\uF0B7\uF0A7\uF076\uF0D8\uF0FC\uF0A8\uF0E0\uF06C\uF06E]/g, "-")
+    .replace(/[\uE000-\uF8FF]/g, "")
+    .replace(/[\u2022\u25CF\u25AA\u25E6\u2219\u00B7\u2043\u2023]/g, "-")
+    .replace(/[\u00A0\u2007\u202F]/g, " ");
+}
+
+// Reconstruct lines and paragraph breaks from positioned text items,
+// instead of collapsing the whole page into one space-joined blob.
 export async function extractAllText(doc: PDFDocumentProxy): Promise<string[]> {
   const pages: string[] = [];
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
-    const text = content.items
-      .map((it) => ("str" in it ? it.str : ""))
-      .join(" ")
-      .replace(/\s+/g, " ")
-      .trim();
-    pages.push(text);
+    const lines: string[] = [];
+    let cur = "";
+    let lastY: number | null = null;
+    let lastH = 0;
+    const flush = () => {
+      const t = cur.replace(/[ \t]+/g, " ").trim();
+      if (t) lines.push(t);
+      cur = "";
+    };
+    for (const it of content.items) {
+      if (!("str" in it)) continue;
+      const str = cleanGlyphs(it.str);
+      if (!str) continue;
+      const y = it.transform[5];
+      const h = Math.abs(it.transform[3]) || Math.abs(it.transform[0]) || 0;
+      if (lastY !== null) {
+        const dy = Math.abs(y - lastY);
+        const h = lastH > 0 ? lastH : 10;
+        if (dy > h * 1.7) {
+          flush();
+          if (lines.length && lines[lines.length - 1] !== "") lines.push(""); // paragraph gap
+        } else if (cur && dy > Math.max(2, h * 0.5)) {
+          flush(); // new line, same paragraph
+        }
+      }
+      if (cur && !cur.endsWith(" ") && !str.startsWith(" ")) cur += " ";
+      cur += str;
+      lastY = y;
+      if (h > 0) lastH = h;
+      if (it.hasEOL) flush();
+    }
+    flush();
+    pages.push(lines.join("\n").replace(/\n{3,}/g, "\n\n").trim());
   }
   return pages;
 }
