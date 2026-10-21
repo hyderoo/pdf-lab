@@ -136,116 +136,171 @@ export async function textToPdf(title: string | null, body: string): Promise<Blo
   return new Blob([bytes as BlobPart], { type: "application/pdf" });
 }
 
-import type { TextBlock } from "./pdf";
+import type { ExtractedDoc, TextBlock } from "./pdf";
 
-// Re-render translated blocks with the source's visual structure:
-// sizes, bold, bullets, right-aligned dates, heading rules, original page
-// size. Auto-shrinks (max 2 steps) so a 1-page source stays 1 page.
+// Re-render translated blocks with the source's visual structure: sizes,
+// bold runs, bullets, right-aligned dates, centered header lines, heading
+// rules, original page size and margins. Auto-shrinks so a 1-page source
+// stays 1 page.
 export async function blocksToPdf(
   blocks: TextBlock[],
-  srcPage: { width: number; height: number },
-  srcMargin: number
+  layout: ExtractedDoc["layout"]
 ): Promise<Blob> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const pw = srcPage.width;
-  const ph = srcPage.height;
-  const margin = Math.min(Math.max(srcMargin, 36), 80);
-  const maxW = pw - margin * 2;
+  const pw = layout.pageWidth;
+  const ph = layout.pageHeight;
+  const mL = Math.min(Math.max(layout.marginLeft, 20), 90);
+  const mR = Math.min(Math.max(layout.marginRight, 20), 90);
+  const maxW = pw - mL - mR;
   const ink = rgb(0.15, 0.17, 0.2);
   const dark = rgb(0.1, 0.12, 0.16);
-  const clean = (s: string) => s.replace(/[^\x20-\x7E\xC0-\xFF]/g, " ").replace(/[ \t]+/g, " ");
+  // Keep everything WinAnsi (pdf-lib standard fonts) can encode, including
+  // en/em dashes, curly quotes, bullet and ellipsis.
+  const clean = (s: string) =>
+    s
+      .replace(/[^\x20-\x7E\xA0-\xFF\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026\u2122]/g, " ")
+      .replace(/[ \t]+/g, " ");
 
-  const srcPages = Math.max(...blocks.map((b) => b.page), 1);
-
-  const layout = (scale: number): number => {
-    let pages = 1;
-    let y = ph - margin;
-    for (const b of blocks) {
-      const size = Math.max(8, b.size * scale);
-      const lh = size * 1.35;
-      const f = b.bold || b.kind === "name" || b.kind === "heading" ? bold : font;
-      const indent = b.kind === "bullet" ? 14 : 0;
-      const gapBefore = b.kind === "heading" ? size * 0.7 : 0;
-      const lines = wrapInto(clean(b.text), size, f, maxW - indent);
-      const need = gapBefore + lines.length * lh + (b.kind === "heading" ? 6 : 0) + size * 0.25;
-      if (y - need < margin) {
-        pages++;
-        y = ph - margin;
+  type Tok = { w: string; b: boolean };
+  const tokensOf = (b: TextBlock): Tok[] => {
+    const segs =
+      b.segments && b.segments.length
+        ? b.segments
+        : [{ t: b.text, b: b.bold || b.kind === "name" || b.kind === "heading" }];
+    const out: Tok[] = [];
+    for (const s of segs) {
+      for (const w of clean(s.t).split(" ")) {
+        if (w) out.push({ w, b: s.b });
       }
-      y -= need;
+    }
+    return out;
+  };
+  const tokWidth = (t: Tok, size: number) =>
+    (t.b ? bold : font).widthOfTextAtSize(t.w, size);
+  const spaceW = (size: number) => font.widthOfTextAtSize(" ", size);
+
+  // Greedy wrap of bold-tagged tokens into lines.
+  const wrapToks = (toks: Tok[], size: number, width: number): Tok[][] => {
+    const lines: Tok[][] = [];
+    let cur: Tok[] = [];
+    let curW = 0;
+    for (const t of toks) {
+      const tw = tokWidth(t, size);
+      const add = cur.length ? curW + spaceW(size) + tw : tw;
+      if (cur.length && add > width) {
+        lines.push(cur);
+        cur = [t];
+        curW = tw;
+      } else {
+        cur.push(t);
+        curW = add;
+      }
+    }
+    if (cur.length) lines.push(cur);
+    return lines;
+  };
+
+  const lineWidth = (toks: Tok[], size: number) =>
+    toks.reduce((acc, t, i) => acc + tokWidth(t, size) + (i ? spaceW(size) : 0), 0);
+
+  const srcPages = Math.max(layout.pageCount, 1);
+  const topY = Math.min(Math.max(layout.startY, ph - 120), ph - 20);
+  const bottomY = Math.min(Math.max(mR, 24), 60);
+
+  const blockHeight = (b: TextBlock, scale: number): number => {
+    const size = b.size * scale;
+    const lh = size * 1.32;
+    const indent = b.kind === "bullet" ? 10 * scale : 0;
+    const lines = wrapToks(tokensOf(b), size, maxW - indent).length;
+    const gapBefore = b.kind === "heading" ? size * 0.8 : b.kind === "name" ? 0 : size * 0.12;
+    const after = b.kind === "heading" ? size * 0.55 : size * 0.12;
+    return gapBefore + lines * lh + after;
+  };
+
+  const totalPages = (scale: number): number => {
+    let pages = 1;
+    let y = topY;
+    let curSrc = 1;
+    for (const b of blocks) {
+      if (b.page > curSrc) {
+        pages += b.page - curSrc;
+        curSrc = b.page;
+        y = topY;
+      }
+      const h = blockHeight(b, scale);
+      if (y - h < bottomY) {
+        pages++;
+        y = topY;
+      }
+      y -= h;
     }
     return pages;
   };
 
-  const wrapInto = (text: string, size: number, f: PDFFont, width: number): string[] => {
-    const out: string[] = [];
-    let line = "";
-    for (const word of text.split(" ")) {
-      const test = line ? `${line} ${word}` : word;
-      if (f.widthOfTextAtSize(test, size) > width && line) {
-        out.push(line);
-        line = word;
-      } else line = test;
-    }
-    if (line) out.push(line);
-    return out;
-  };
-
   let scale = 1;
-  for (const cand of [1, 0.92, 0.85]) {
+  for (const cand of [1, 0.95, 0.9, 0.85, 0.8]) {
     scale = cand;
-    if (layout(cand) <= srcPages) break;
+    if (totalPages(cand) <= srcPages) break;
   }
 
   let page: PDFPage = doc.addPage([pw, ph]);
   let curSrc = 1;
-  let y = ph - margin;
+  let y = topY;
+  const newPage = () => {
+    page = doc.addPage([pw, ph]);
+    y = topY;
+  };
+
   for (const b of blocks) {
-    const size = Math.max(8, b.size * scale);
-    const lh = size * 1.35;
-    const isHead = b.kind === "name" || b.kind === "heading";
-    const f = b.bold || isHead ? bold : font;
-    const indent = b.kind === "bullet" ? 14 : 0;
-    const gapBefore = b.kind === "heading" ? size * 0.7 : 0;
+    const size = b.size * scale;
+    const lh = size * 1.32;
+    const indent = b.kind === "bullet" ? 10 * scale : 0;
     while (b.page > curSrc) {
-      page = doc.addPage([pw, ph]);
-      y = ph - margin;
+      newPage();
       curSrc++;
     }
-    const lines = wrapInto(clean(b.text), size, f, maxW - indent);
-    if (y - (gapBefore + lh) < margin) {
-      page = doc.addPage([pw, ph]);
-      y = ph - margin;
-    }
+    const gapBefore = b.kind === "heading" ? size * 0.8 : b.kind === "name" ? 0 : size * 0.12;
+    if (y - gapBefore - lh < bottomY) newPage();
     y -= gapBefore;
+
+    const lines = wrapToks(tokensOf(b), size, maxW - indent - (b.date ? 90 * scale : 0));
     for (let i = 0; i < lines.length; i++) {
-      if (y < margin + lh) {
-        page = doc.addPage([pw, ph]);
-        y = ph - margin;
-      }
+      if (y - lh < bottomY) newPage();
+      const toks = lines[i];
+      const lw = lineWidth(toks, size);
+      let x = mL + indent;
+      if (b.align === "center") x = mL + Math.max(0, (maxW - lw) / 2);
+      const baseline = y - size;
       if (b.kind === "bullet" && i === 0) {
-        page.drawText("-", { x: margin, y: y - size, size, font: bold, color: ink });
+        page.drawText("\u2022", { x: mL, y: baseline, size, font: bold, color: ink });
       }
-      page.drawText(lines[i], { x: margin + indent, y: y - size, size, font: f, color: isHead ? dark : ink });
+      for (let ti = 0; ti < toks.length; ti++) {
+        const t = toks[ti];
+        const f = t.b ? bold : font;
+        page.drawText(t.w, { x, y: baseline, size, font: f, color: b.kind === "name" || b.kind === "heading" ? dark : ink });
+        x += tokWidth(t, size) + spaceW(size);
+      }
       if (i === 0 && b.date) {
         const d = clean(b.date);
-        const w = font.widthOfTextAtSize(d, size);
-        page.drawText(d, { x: pw - margin - w, y: y - size, size, font, color: ink });
+        const df = b.dateBold ? bold : font;
+        const w = df.widthOfTextAtSize(d, size);
+        page.drawText(d, { x: pw - mR - w, y: baseline, size, font: df, color: ink });
       }
       y -= lh;
     }
     if (b.kind === "heading") {
       page.drawLine({
-        start: { x: margin, y: y + size * 0.35 },
-        end: { x: margin + maxW, y: y + size * 0.35 },
+        start: { x: mL, y: y + size * 0.32 },
+        end: { x: pw - mR, y: y + size * 0.32 },
         thickness: 0.6,
         color: rgb(0.8, 0.82, 0.85),
       });
-      y -= 6;
+      y -= size * 0.55;
+    } else {
+      y -= size * 0.12;
     }
-    y -= size * 0.25;
   }
 
   const bytes = await doc.save();

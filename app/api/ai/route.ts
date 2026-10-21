@@ -96,8 +96,10 @@ export async function POST(req: Request) {
     const prompt =
       `Terjemahkan setiap elemen array JSON berikut ke ${target}. ` +
       "Kembalikan HANYA satu array JSON berisi string hasil terjemahan, dengan jumlah elemen dan urutan yang PERSIS sama. " +
-      "Setiap elemen adalah satu blok (judul, poin, atau paragraf) dari sebuah dokumen; jangan menggabung atau memecah blok. " +
-      "Nama diri, nama merek, dan nama produk tetap seperti aslinya. Semua kalimat lain WAJIB diterjemahkan sepenuhnya ke " + target + ". " +
+      "Setiap elemen adalah satu potongan teks dari sebuah dokumen; jangan menggabung atau memecah elemen. " +
+      "Nama diri, nama merek, nama produk, URL, dan alamat email tetap persis seperti aslinya. Semua kalimat lain WAJIB diterjemahkan sepenuhnya ke " + target + ". " +
+      "Jaga persis tanda baca pemisah seperti en dash (–), em dash (—), middot (·), pipe (|), dan &: jangan dihapus, diganti spasi, atau diubah jadi tanda lain. " +
+      "Untuk rentang tanggal seperti \"Jun 2026 – Present\", terjemahkan hanya katanya (mis. Present → Sekarang) dan pertahankan pemisahnya: \"Jun 2026 – Sekarang\". " +
       "Teks polos tanpa format markdown.\n\nARRAY:\n" + JSON.stringify(blocks);
     const out = await callGemini(prompt, key, model);
     if (out instanceof NextResponse) return out;

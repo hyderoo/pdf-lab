@@ -36,38 +36,60 @@ export default function TerjemahkanPdf() {
     setResult(null);
     try {
       setProgress("Mengekstrak struktur dokumen...");
-      const doc = await loadPdfJsDoc(await file.arrayBuffer());
-      const blocks = await extractBlocks(doc);
-      const texts = blocks.map((b) => (b.date ? `${b.text}  ${b.date}` : b.text));
-      if (!texts.join("").trim()) throw new Error("PDF ini tidak punya teks (mungkin hasil scan tanpa OCR).");
+      const buf = await file.arrayBuffer();
+      const doc = await loadPdfJsDoc(buf.slice(0));
+      const ext = await extractBlocks(doc, buf.slice(0));
+      const blocks = ext.blocks;
+      if (!blocks.length) throw new Error("PDF ini tidak punya teks (mungkin hasil scan tanpa OCR).");
 
-      setProgress(`Menerjemahkan ${texts.length} blok dengan AI...`);
+      // Flatten to pieces: one array item per bold/regular run and per date,
+      // so formatting survives translation without the model seeing markup.
+      const pieces: string[] = [];
+      const map: { block: number; kind: "seg" | "date"; seg: number }[] = [];
+      blocks.forEach((b, bi) => {
+        const segs = b.segments && b.segments.length ? b.segments : [{ t: b.text, b: b.bold }];
+        segs.forEach((s, si) => {
+          if (!s.t.trim()) return;
+          pieces.push(s.t.trim());
+          map.push({ block: bi, kind: "seg", seg: si });
+        });
+        if (b.date) {
+          pieces.push(b.date);
+          map.push({ block: bi, kind: "date", seg: -1 });
+        }
+      });
+
+      setProgress(`Menerjemahkan ${pieces.length} bagian dengan AI...`);
       const resp = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "translateBlocks", blocks: texts, targetLang: target }),
+        body: JSON.stringify({ action: "translateBlocks", blocks: pieces, targetLang: target }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Gagal menerjemahkan.");
       const translated: string[] = data.result;
 
       setProgress("Menyusun ulang PDF...");
-      const out = blocks.map((b, i) => {
-        let text = translated[i] ?? b.text;
-        let date = b.date;
-        // The block was sent with its date appended; split the translated tail
-        // back off so the date can be right-aligned again.
-        if (date && text.endsWith(date)) {
-          text = text.slice(0, text.length - date.length).trim();
-        } else {
-          date = undefined; // model merged the date inline; keep as-is
+      const out = blocks.map((b) => ({
+        ...b,
+        segments: (b.segments && b.segments.length ? b.segments : [{ t: b.text, b: b.bold }]).map((s) => ({ ...s, t: "" })),
+        text: "",
+        date: b.date,
+      }));
+      map.forEach((m, i) => {
+        const t = (translated[i] ?? pieces[i]).trim();
+        const ob = out[m.block];
+        if (m.kind === "date") ob.date = t;
+        else {
+          ob.segments![m.seg].t = t;
         }
-        return { ...b, text, date };
       });
-      const first = await doc.getPage(1);
-      const vp = first.getViewport({ scale: 1 });
-      const minX = Math.min(...blocks.map((b) => (b as unknown as { _x?: number })._x ?? 56), 56);
-      const blob = await blocksToPdf(out, { width: vp.width, height: vp.height }, minX);
+      for (const ob of out) {
+        ob.segments = ob.segments!.filter((s) => s.t);
+        ob.text = ob.segments.map((s) => s.t).join(" ");
+        ob.segments.forEach((s, i) => { if (i > 0) s.t = " " + s.t; });
+      }
+      const blob = await blocksToPdf(out, ext.layout);
       const lang = target === "en" ? "inggris" : "indonesia";
       const name = `${baseName(file.name)}-${lang}.pdf`;
       setResult({ blob, name });
