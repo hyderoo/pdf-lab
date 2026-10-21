@@ -14,6 +14,7 @@ import {
   Hash,
   Droplet,
   Minimize2,
+  Clapperboard,
   type LucideIcon,
 } from "lucide-react";
 
@@ -22,7 +23,7 @@ export type Tool = {
   title: string;
   description: string;
   icon: LucideIcon;
-  category: "Analisis" | "Konversi ke PDF" | "Konversi dari PDF" | "Halaman";
+  category: "Analisis" | "Konversi ke PDF" | "Konversi dari PDF" | "Halaman" | "Video";
   ai?: boolean;
 };
 
@@ -140,6 +141,14 @@ export const tools: Tool[] = [
     category: "Halaman",
   },
   {
+    slug: "kompres-video",
+    title: "Kompres Video",
+    description:
+      "Kecilkan ukuran video (MP4, WebM, MOV) langsung di browser. Hasilnya MP4 yang bisa diputar di mana saja.",
+    icon: Clapperboard,
+    category: "Video",
+  },
+  {
     slug: "kompres-pdf",
     title: "Kompres PDF",
     description:
@@ -154,4 +163,5 @@ export const categories = [
   "Konversi ke PDF",
   "Konversi dari PDF",
   "Halaman",
+  "Video",
 ] as const;
