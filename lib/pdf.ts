@@ -234,7 +234,12 @@ export async function extractBlocks(
   };
   type Item = { str: string; x: number; y: number; h: number; w: number; fontName: string };
 
-  const baseBold = raw ? scanBaseFontBold(raw) : null;
+  let baseBold: boolean[] | null = null;
+  try {
+    baseBold = raw ? scanBaseFontBold(raw) : null;
+  } catch {
+    baseBold = null;
+  }
   let pageWidth = 595.28;
   let pageHeight = 841.89;
 
@@ -507,7 +512,12 @@ export async function extractTextLines(
   scales: Record<number, number>,
   raw?: ArrayBuffer
 ): Promise<EditableLine[]> {
-  const baseBold = raw ? scanBaseFontBold(raw) : null;
+  let baseBold: boolean[] | null = null;
+  try {
+    baseBold = raw ? scanBaseFontBold(raw) : null;
+  } catch {
+    baseBold = null;
+  }
   const fontRefs: string[] = [];
   const fontState = new Map<string, boolean | undefined>();
   type It = { str: string; x: number; y: number; h: number; w: number; fontName: string };
@@ -516,12 +526,13 @@ export async function extractTextLines(
 
   // Pass 1: items + font info.
   for (let i = 1; i <= doc.numPages; i++) {
-    const page = await doc.getPage(i);
-    await page.getOperatorList();
-    const vp = page.getViewport({ scale: 1 });
-    pageHeights.push(vp.height);
-    const content = await page.getTextContent();
     const items: It[] = [];
+    try {
+      const page = await doc.getPage(i);
+      await page.getOperatorList();
+      const vp = page.getViewport({ scale: 1 });
+      pageHeights.push(vp.height);
+      const content = await page.getTextContent();
     for (const it of content.items) {
       if (!("str" in it)) continue;
       const str = cleanGlyphs(it.str);
@@ -544,6 +555,9 @@ export async function extractTextLines(
         }
         fontState.set(it.fontName, b);
       }
+    }
+    } catch {
+      if (pageHeights.length < i) pageHeights.push(842);
     }
     pagesItems.push(items);
   }

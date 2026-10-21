@@ -50,6 +50,14 @@ export default function EditPdf() {
   const [result, setResult] = useState<{ blob: Blob; name: string } | null>(null);
   const [textDraft, setTextDraft] = useState<{ page: number; x: number; y: number; value: string } | null>(null);
   const [lines, setLines] = useState<EditableLine[]>([]);
+  const [linesReady, setLinesReady] = useState(false);
+  const [hint, setHint] = useState("");
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showHint = (msg: string) => {
+    setHint(msg);
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setHint(""), 4000);
+  };
   const [editDraft, setEditDraft] = useState<{ x: number; baseY: number; w: number; size: number; bold: boolean; page: number; orig: string; value: string; rightX?: number } | null>(null);
   const canvases = useRef<Record<number, HTMLCanvasElement | null>>({});
   const imgInput = useRef<HTMLInputElement | null>(null);
@@ -59,6 +67,8 @@ export default function EditPdf() {
     setError("");
     setResult(null);
     setAnnots([]);
+    setLines([]);
+    setLinesReady(false);
     try {
       const buf = await f.arrayBuffer();
       const d = await loadPdfJsDoc(buf.slice(0));
@@ -71,7 +81,13 @@ export default function EditPdf() {
       setDoc(d);
       setNumPages(d.numPages);
       setScales(sc);
-      setLines(await extractTextLines(d, sc, buf.slice(0)));
+      setLinesReady(false);
+      try {
+        setLines(await extractTextLines(d, sc, buf.slice(0)));
+      } catch {
+        setLines([]);
+      }
+      setLinesReady(true);
     } catch {
       setError("PDF tidak bisa dibaca.");
     }
@@ -118,7 +134,15 @@ export default function EditPdf() {
       return;
     }
     if (tool === "editText") {
+      if (!linesReady) {
+        showHint("Teks PDF masih diproses - tunggu sesaat, lalu klik barisnya lagi.");
+        return;
+      }
       const hit = hitLine(lines, page, pt.x, pt.y);
+      if (!hit) {
+        showHint(lines.length ? "Klik pas di atas baris teks yang mau diganti." : "Tidak ada teks yang terbaca di PDF ini, jadi tidak ada baris yang bisa diganti.");
+        return;
+      }
       if (hit) {
         const colorGuess = sampleTextColor(canvases.current[page], hit.x, hit.baseY, hit.w, hit.size);
         setEditDraft({ x: hit.x, baseY: hit.baseY, w: hit.w, size: hit.size, bold: hit.bold, page, orig: hit.text, value: hit.text, rightX: hit.rightX });
@@ -175,6 +199,27 @@ export default function EditPdf() {
   };
 
   const onPointerUp = () => {
+    const cur = drag.current.cur;
+    if (tool === "highlight" && cur && cur.type === "highlight" && linesReady) {
+      // Snap the dragged area to the text lines it covers (like selecting text),
+      // instead of leaving a free rectangle. Areas without text keep the free rect.
+      const x1 = cur.x, y1 = cur.y, x2 = cur.x + cur.w, y2 = cur.y + cur.h;
+      const snapped: Annotation[] = [];
+      for (const l of lines) {
+        if (l.page !== cur.page) continue;
+        const ly1 = l.baseY - l.size * 1.12;
+        const ly2 = l.baseY + l.size * 0.38;
+        if (ly2 < y1 || ly1 > y2) continue;
+        const segs: [number, number][] = [[l.x - 1, l.x + l.w + 1]];
+        if (l.date) segs.push([l.date.x - 1, l.date.x + l.date.w + 1]);
+        for (const [sx1, sx2] of segs) {
+          const ix1 = Math.max(sx1, x1), ix2 = Math.min(sx2, x2);
+          if (ix2 <= ix1) continue;
+          snapped.push({ id: uid(), type: "highlight", page: cur.page, x: ix1, y: ly1, w: ix2 - ix1, h: ly2 - ly1, color: cur.color, thickness: cur.thickness });
+        }
+      }
+      if (snapped.length) setAnnots((list) => [...list.filter((a) => a.id !== cur.id), ...snapped]);
+    }
     drag.current.start = null;
     drag.current.cur = null;
     drag.current.move = undefined;
@@ -261,7 +306,7 @@ export default function EditPdf() {
             {TOOLS.map((t) => (
               <button
                 key={t.id}
-                onClick={() => setTool(t.id)}
+                onClick={() => { setTool(t.id); if (t.id === "highlight") setColor(COLORS[0]); }}
                 title={t.label}
                 className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition ${tool === t.id ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-100"}`}
               >
@@ -288,6 +333,7 @@ export default function EditPdf() {
             <span className="mx-1 h-5 w-px bg-slate-200" />
             <button onClick={undo} title="Urungkan" className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100"><Undo2 size={15} /></button>
             <button onClick={deleteSelected} disabled={!selected} title="Hapus anotasi terpilih" className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100 disabled:opacity-40"><Trash2 size={15} /></button>
+            {hint && <div className="basis-full rounded-md border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs text-sky-800">{hint}</div>}
           </div>
 
           <div className="mb-4 flex flex-col items-center gap-5">
@@ -517,14 +563,15 @@ function PageCanvas({
 
   return (
     <div
-      className="relative border border-line bg-white shadow-sm"
+      className="relative select-none border border-line bg-white shadow-sm"
       style={{ width: dims?.w ?? PAGE_W, height: dims?.h ?? PAGE_W * 1.3, touchAction: "none", cursor: tool === "select" ? "default" : tool === "editText" ? "text" : "crosshair" }}
       onPointerDown={(e) => onPointerDown(e, page)}
       onPointerMove={(e) => onPointerMove(e, page)}
       onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
     >
       <canvas ref={canvasRef} className="absolute inset-0" />
-      <svg className="absolute inset-0" width={dims?.w ?? PAGE_W} height={dims?.h ?? 0}>
+      <svg className="absolute inset-0 select-none" width={dims?.w ?? PAGE_W} height={dims?.h ?? 0}>
         {annots.map(drawAnnot)}
       </svg>
     </div>
@@ -545,10 +592,10 @@ function hitLine(lines: EditableLine[], page: number, x: number, y: number): { x
   for (let i = lines.length - 1; i >= 0; i--) {
     const l = lines[i];
     if (l.page !== page) continue;
-    if (l.date && x >= l.date.x - 3 && x <= l.date.x + l.date.w + 3 && y >= l.baseY - l.size * 1.1 && y <= l.baseY + l.size * 0.35) {
+    if (l.date && x >= l.date.x - 6 && x <= l.date.x + l.date.w + 6 && y >= l.baseY - l.size * 1.15 && y <= l.baseY + l.size * 0.5) {
       return { x: l.date.x, baseY: l.baseY, w: l.date.w, size: l.size, bold: l.date.bold, text: l.date.text, rightX: l.date.x + l.date.w };
     }
-    if (x >= l.x - 3 && x <= l.x + l.w + 3 && y >= l.baseY - l.size * 1.1 && y <= l.baseY + l.size * 0.35) {
+    if (x >= l.x - 6 && x <= l.x + l.w + 6 && y >= l.baseY - l.size * 1.15 && y <= l.baseY + l.size * 0.5) {
       return { x: l.x, baseY: l.baseY, w: l.w, size: l.size, bold: l.bold, text: l.text };
     }
   }
