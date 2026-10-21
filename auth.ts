@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { site } from "@/lib/site";
+import type { Provider } from "next-auth/providers";
 
 function isAllowedEmail(email: string | null | undefined): boolean {
   if (!email) return false;
@@ -9,7 +10,7 @@ function isAllowedEmail(email: string | null | undefined): boolean {
   return site.allowedDomains.some((d) => e.endsWith("@" + d));
 }
 
-const providers = [Google];
+const providers: Provider[] = [Google];
 
 // Optional provider: only enabled when its env vars are set, so a partially
 // configured deployment (Google only) keeps working.
