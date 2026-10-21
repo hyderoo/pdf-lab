@@ -169,6 +169,7 @@ export const tools: Tool[] = [
 
 export const categories = [
   "Analisis",
+  "Edit",
   "Konversi ke PDF",
   "Konversi dari PDF",
   "Halaman",
