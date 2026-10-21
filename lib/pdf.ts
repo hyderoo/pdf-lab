@@ -72,32 +72,43 @@ export async function extractAllText(doc: PDFDocumentProxy): Promise<string[]> {
     let cur = "";
     let lastY: number | null = null;
     let lastH = 0;
+    let lineStartX: number | null = null;
     const flush = () => {
       const t = cur.replace(/[ \t]+/g, " ").trim();
       if (t) lines.push(t);
       cur = "";
+      lineStartX = null;
     };
     for (const it of content.items) {
       if (!("str" in it)) continue;
       const str = cleanGlyphs(it.str);
       if (!str) continue;
+      const x = it.transform[4];
       const y = it.transform[5];
       const h = Math.abs(it.transform[3]) || Math.abs(it.transform[0]) || 0;
+      const startsBullet = /^[-*]\s/.test(str.trimStart());
       if (lastY !== null) {
         const dy = Math.abs(y - lastY);
-        const h = lastH > 0 ? lastH : 10;
-        if (dy > h * 1.7) {
+        const hPrev = lastH > 0 ? lastH : 10;
+        const sizeChanged = h > 0 && lastH > 0 && Math.abs(h - lastH) / lastH > 0.25;
+        const indentChanged = lineStartX !== null && Math.abs(x - lineStartX) > 20;
+        if (dy > hPrev * 1.7) {
           flush();
           if (lines.length && lines[lines.length - 1] !== "") lines.push(""); // paragraph gap
-        } else if (cur && dy > Math.max(2, h * 0.5)) {
-          flush(); // new line, same paragraph
+        } else if (
+          cur &&
+          dy > Math.max(2, hPrev * 0.5) &&
+          (startsBullet || indentChanged || sizeChanged)
+        ) {
+          flush(); // real boundary: new bullet, indent, or font size
         }
+        // otherwise: same paragraph wrapping - keep accumulating (join)
       }
       if (cur && !cur.endsWith(" ") && !str.startsWith(" ")) cur += " ";
+      if (!cur) lineStartX = x;
       cur += str;
       lastY = y;
       if (h > 0) lastH = h;
-      if (it.hasEOL) flush();
     }
     flush();
     pages.push(lines.join("\n").replace(/\n{3,}/g, "\n\n").trim());

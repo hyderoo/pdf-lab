@@ -62,7 +62,7 @@ export default function TerjemahkanPdf() {
   const download = async () => {
     if (!file || !translated) return;
     const lang = target === "en" ? "inggris" : "indonesia";
-    const blob = await textToPdf(`Terjemahan (${lang}) - ${baseName(file.name)}`, translated);
+    const blob = await textToPdf(null, translated);
     downloadBlob(blob, `${baseName(file.name)}-${lang}.pdf`);
   };
 

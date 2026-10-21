@@ -62,7 +62,8 @@ export async function POST(req: Request) {
       `Terjemahkan dokumen berikut ke ${target} dengan setia, pertahankan makna, istilah teknis, dan struktur per bagian. ` +
       "Tulis dalam teks polos: tanpa format markdown apa pun (tanpa **, *, _, #, atau backtick). " +
       "Pertahankan struktur baris, baris kosong antar bagian, dan poin-poin (tulis tiap poin sebagai baris yang diawali tanda minus) persis seperti dokumen asli. " +
-      "Nama diri, nama merek, nama produk, dan istilah jabatan tetap seperti aslinya, jangan diterjemahkan atau diparafrasekan. " +
+      "Nama diri, nama merek, dan nama produk tetap seperti aslinya, jangan diterjemahkan. " +
+      `Semua kalimat lain WAJIB diterjemahkan sepenuhnya ke ${target}; jangan biarkan satu pun kalimat atau paragraf utuh tetap dalam bahasa asal. ` +
       "Jangan menambahkan komentar apa pun selain hasil terjemahan.\n\nDOKUMEN:\n" + text;
   } else {
     return NextResponse.json({ error: "Aksi tidak dikenal." }, { status: 400 });
