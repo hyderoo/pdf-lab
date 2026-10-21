@@ -10,12 +10,39 @@ export type Annotation =
   | { id: string; type: "ellipse"; page: number; x: number; y: number; w: number; h: number; color: string; thickness: number }
   | { id: string; type: "line" | "arrow"; page: number; x1: number; y1: number; x2: number; y2: number; color: string; thickness: number }
   | { id: string; type: "pen"; page: number; points: number[]; color: string; thickness: number }
-  | { id: string; type: "image"; page: number; x: number; y: number; w: number; h: number; dataUrl: string };
+  | { id: string; type: "image"; page: number; x: number; y: number; w: number; h: number; dataUrl: string }
+  // Replaces one existing source line: whites out the original region and
+  // draws the new text at the same position/size/weight. baseY is the
+  // original baseline (CSS pixel space of the editor canvas).
+  | { id: string; type: "edit"; page: number; x: number; baseY: number; w: number; size: number; bold: boolean; color: string; text: string; rightX?: number };
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex);
   const v = m ? parseInt(m[1], 16) : 0;
   return { r: ((v >> 16) & 255) / 255, g: ((v >> 8) & 255) / 255, b: (v & 255) / 255 };
+}
+
+// Greedy word wrap with a caller-supplied width measurer, so the overlay
+// (canvas metrics) and the exporter (pdf-lib metrics) wrap identically
+// enough for the same text and width.
+export function wrapToWidth(text: string, maxW: number, measure: (word: string) => number, spaceW: number): string[] {
+  const out: string[] = [];
+  let line = "";
+  let lineW = 0;
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    const ww = measure(word);
+    const add = line ? lineW + spaceW + ww : ww;
+    if (line && add > maxW) {
+      out.push(line);
+      line = word;
+      lineW = ww;
+    } else {
+      line = line ? line + " " + word : word;
+      lineW = add;
+    }
+  }
+  if (line) out.push(line);
+  return out.length ? out : [""];
 }
 
 function svgPathFromPoints(points: number[], scale: number, pageHeight: number): string {
@@ -95,6 +122,44 @@ export async function exportPdfWithAnnotations(
       case "pen": {
         const d = svgPathFromPoints(a.points, S, ph);
         page.drawSvgPath(d, { borderColor: col, borderWidth: a.thickness / S });
+        break;
+      }
+      case "edit": {
+        // Whiteout the original line region, then draw the replacement
+        // text at the same baseline, size and weight (Helvetica fallback).
+        const f = a.bold ? helvBold : helv;
+        const size = a.size / S;
+        const safe = a.text.replace(/[^\x20-\x7E\xA0-\xFF\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026]/g, " ");
+        const whiteTop = a.baseY - a.size * 1.08;
+        const whiteH = a.size * 1.38;
+        if (a.rightX != null) {
+          // Right-aligned piece (e.g. a date column): keep the right edge
+          // fixed on one line, growing or shrinking to the left instead of
+          // wrapping onto the row below.
+          const wNew = f.widthOfTextAtSize(safe, size);
+          const x0 = a.rightX / S - wNew;
+          const xMin = Math.min(x0, X(a.x));
+          page.drawRectangle({
+            x: xMin - 1 / S,
+            y: Y(whiteTop + whiteH),
+            width: a.rightX / S - xMin + 2 / S,
+            height: whiteH / S,
+            color: rgb(1, 1, 1),
+          });
+          page.drawText(safe, { x: x0, y: Y(a.baseY), size, font: f, color: col });
+          break;
+        }
+        page.drawRectangle({
+          x: X(a.x) - 1 / S,
+          y: Y(whiteTop + whiteH),
+          width: (a.w + 2) / S,
+          height: whiteH / S,
+          color: rgb(1, 1, 1),
+        });
+        const lines = wrapToWidth(safe, (a.w + 4) / S, (w) => f.widthOfTextAtSize(w, size), f.widthOfTextAtSize(" ", size));
+        lines.forEach((line, i) => {
+          page.drawText(line, { x: X(a.x), y: Y(a.baseY + i * a.size * 1.2), size, font: f, color: col });
+        });
         break;
       }
       case "image": {

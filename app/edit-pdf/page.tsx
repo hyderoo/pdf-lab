@@ -4,17 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ToolShell from "@/components/ToolShell";
 import FileDrop from "@/components/FileDrop";
 import { PrimaryButton, SecondaryButton, ResultCard, ErrorNote, FieldLabel } from "@/components/ui";
-import { loadPdfJsDoc, downloadBlob, formatBytes, baseName } from "@/lib/pdf";
-import { exportPdfWithAnnotations, hexToRgb, type Annotation } from "@/lib/editor";
+import { loadPdfJsDoc, downloadBlob, formatBytes, baseName, extractTextLines, type EditableLine } from "@/lib/pdf";
+import { exportPdfWithAnnotations, hexToRgb, wrapToWidth, type Annotation } from "@/lib/editor";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { Type, Highlighter, PenLine, Square, Circle, MoveRight, Minus, Image as ImageIcon, Eraser, MousePointer2, Undo2, Trash2 } from "lucide-react";
+import { Type, Highlighter, PenLine, Square, Circle, MoveRight, Minus, Image as ImageIcon, Eraser, MousePointer2, Undo2, Trash2, PencilLine } from "lucide-react";
 
 type Tool =
-  | "select" | "text" | "highlight" | "pen" | "rect" | "ellipse"
+  | "select" | "editText" | "text" | "highlight" | "pen" | "rect" | "ellipse"
   | "line" | "arrow" | "image" | "whiteout";
 
 const TOOLS: { id: Tool; label: string; icon: React.ReactNode }[] = [
   { id: "select", label: "Pilih", icon: <MousePointer2 size={15} /> },
+  { id: "editText", label: "Edit teks", icon: <PencilLine size={15} /> },
   { id: "text", label: "Teks", icon: <Type size={15} /> },
   { id: "highlight", label: "Highlight", icon: <Highlighter size={15} /> },
   { id: "pen", label: "Gambar", icon: <PenLine size={15} /> },
@@ -48,6 +49,9 @@ export default function EditPdf() {
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ blob: Blob; name: string } | null>(null);
   const [textDraft, setTextDraft] = useState<{ page: number; x: number; y: number; value: string } | null>(null);
+  const [lines, setLines] = useState<EditableLine[]>([]);
+  const [editDraft, setEditDraft] = useState<{ x: number; baseY: number; w: number; size: number; bold: boolean; page: number; orig: string; value: string; rightX?: number } | null>(null);
+  const canvases = useRef<Record<number, HTMLCanvasElement | null>>({});
   const imgInput = useRef<HTMLInputElement | null>(null);
   const imgTarget = useRef<{ page: number; x: number; y: number } | null>(null);
 
@@ -67,6 +71,7 @@ export default function EditPdf() {
       setDoc(d);
       setNumPages(d.numPages);
       setScales(sc);
+      setLines(await extractTextLines(d, sc, buf.slice(0)));
     } catch {
       setError("PDF tidak bisa dibaca.");
     }
@@ -110,6 +115,16 @@ export default function EditPdf() {
         const [x1, y1] = bbox(hit, S(page))[0];
         drag.current.move = { id: hit.id, dx: pt.x - x1, dy: pt.y - y1 };
       } else setSelected(null);
+      return;
+    }
+    if (tool === "editText") {
+      const hit = hitLine(lines, page, pt.x, pt.y);
+      if (hit) {
+        const colorGuess = sampleTextColor(canvases.current[page], hit.x, hit.baseY, hit.w, hit.size);
+        setEditDraft({ x: hit.x, baseY: hit.baseY, w: hit.w, size: hit.size, bold: hit.bold, page, orig: hit.text, value: hit.text, rightX: hit.rightX });
+        void colorGuess;
+        setColor(colorGuess);
+      }
       return;
     }
     if (tool === "text") {
@@ -176,6 +191,17 @@ export default function EditPdf() {
     setTextDraft(null);
   };
 
+  const commitEdit = () => {
+    if (!editDraft) return;
+    if (editDraft.value.trim() && editDraft.value !== editDraft.orig) {
+      setAnnots((a) => [
+        ...a,
+        { id: uid(), type: "edit", page: editDraft.page, x: editDraft.x, baseY: editDraft.baseY, w: editDraft.w, size: editDraft.size, bold: editDraft.bold, color, text: editDraft.value, rightX: editDraft.rightX },
+      ]);
+    }
+    setEditDraft(null);
+  };
+
   const onImagePicked = async (f: File) => {
     const pt = imgTarget.current;
     if (!pt) return;
@@ -217,7 +243,7 @@ export default function EditPdf() {
   return (
     <ToolShell
       title="Edit PDF"
-      description="Tambahkan teks, highlight, coretan, bentuk, gambar, atau whiteout di atas PDF. Semua diproses di browser."
+      description="Ganti teks yang ada, atau tambahkan teks, highlight, coretan, bentuk, gambar, dan whiteout di atas PDF. Semua diproses di browser."
     >
       {!file ? (
         <FileDrop accept="application/pdf" onFiles={(fs) => fs[0] && onFile(fs[0])} label="Pilih satu PDF untuk diedit" />
@@ -227,8 +253,8 @@ export default function EditPdf() {
             {file.name} · {numPages} halaman · {formatBytes(file.size)}
           </p>
           <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
-            Anotasi digambar di atas isi PDF. Teks yang sudah ada di PDF tidak bisa diubah langsung;
-            tutup dengan whiteout lalu tambahkan teks baru di atasnya.
+            Anotasi digambar di atas isi PDF. Dengan alur "Edit teks", baris teks asli bisa diganti: klik barisnya,
+            ketik penggantinya, lalu teks lama ditimpa whiteout dan teks baru digambar di posisi yang sama. Bentuk huruf bisa sedikit berbeda dari font asli.
           </div>
 
           <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-center gap-1.5 rounded-lg border border-line bg-white p-2 shadow-sm">
@@ -237,7 +263,7 @@ export default function EditPdf() {
                 key={t.id}
                 onClick={() => setTool(t.id)}
                 title={t.label}
-                className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition ${tool === t.id ? "bg-cobalt text-white" : "text-slate-600 hover:bg-slate-100"}`}
+                className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition ${tool === t.id ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-100"}`}
               >
                 {t.icon} {t.label}
               </button>
@@ -277,6 +303,7 @@ export default function EditPdf() {
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 tool={tool}
+                registerCanvas={(el) => { canvases.current[p] = el; }}
               />
             ))}
           </div>
@@ -295,6 +322,30 @@ export default function EditPdf() {
                 <div className="mt-2 flex justify-end gap-2">
                   <SecondaryButton onClick={() => setTextDraft(null)}>Batal</SecondaryButton>
                   <PrimaryButton onClick={commitText}>Tambah</PrimaryButton>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {editDraft && (
+            <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/30" onClick={commitEdit}>
+              <div className="w-[28rem] rounded-lg bg-white p-3 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <FieldLabel>Edit teks baris ini</FieldLabel>
+                <p className="mb-2 line-clamp-2 rounded bg-slate-50 px-2 py-1 text-xs text-slate-500">Asli: {editDraft.orig}</p>
+                <textarea
+                  autoFocus
+                  value={editDraft.value}
+                  onChange={(e) => setEditDraft({ ...editDraft, value: e.target.value })}
+                  className="h-24 w-full rounded-md border border-line p-2 text-sm"
+                />
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                  Teks asli ditutup whiteout, lalu teks baru digambar dengan Helvetica
+                  {editDraft.bold ? " Bold" : ""} {Math.round(editDraft.size)}px — bentuk huruf bisa sedikit berbeda dari font asli.
+                  Teks yang lebih panjang dari baris asli akan turun ke baris berikutnya.
+                </p>
+                <div className="mt-2 flex justify-end gap-2">
+                  <SecondaryButton onClick={() => setEditDraft(null)}>Batal</SecondaryButton>
+                  <PrimaryButton onClick={commitEdit}>Ganti teks</PrimaryButton>
                 </div>
               </div>
             </div>
@@ -341,6 +392,8 @@ function bbox(a: Annotation, _S: number): [number, number, number, number][] {
       const ys = a.points.filter((_, i) => i % 2 === 1);
       return [[Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]];
     }
+    case "edit":
+      return [[a.x, a.baseY - a.size * 1.1, a.x + a.w, a.baseY + a.size * 0.35]];
   }
 }
 
@@ -358,11 +411,13 @@ function moveTo(a: Annotation, x: number, y: number): Annotation {
       const dx = x - x1, dy = y - y1;
       return { ...a, points: a.points.map((v, i) => v + (i % 2 === 0 ? dx : dy)) };
     }
+    case "edit":
+      return { ...a, x, baseY: y + a.size * 1.1 };
   }
 }
 
 function PageCanvas({
-  doc, page, scale, annots, selected, onPointerDown, onPointerMove, onPointerUp, tool,
+  doc, page, scale, annots, selected, onPointerDown, onPointerMove, onPointerUp, tool, registerCanvas,
 }: {
   doc: PDFDocumentProxy;
   page: number;
@@ -373,6 +428,7 @@ function PageCanvas({
   onPointerMove: (e: React.PointerEvent, page: number) => void;
   onPointerUp: (e: React.PointerEvent) => void;
   tool: Tool;
+  registerCanvas: (el: HTMLCanvasElement | null) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
@@ -384,6 +440,7 @@ function PageCanvas({
       const vp = pg.getViewport({ scale });
       const canvas = canvasRef.current;
       if (!canvas || cancelled) return;
+      registerCanvas(canvas);
       canvas.width = Math.ceil(vp.width);
       canvas.height = Math.ceil(vp.height);
       const ctx = canvas.getContext("2d")!;
@@ -427,13 +484,41 @@ function PageCanvas({
       }
       case "image":
         return <g key={a.id}><image href={a.dataUrl} x={a.x} y={a.y} width={a.w} height={a.h} />{selBox}</g>;
+      case "edit": {
+        if (a.rightX != null) {
+          const wNew = measureText(a.text, a.size, a.bold);
+          const xMin = Math.min(a.x, a.rightX - wNew);
+          return (
+            <g key={a.id}>
+              <rect x={xMin - 1} y={a.baseY - a.size * 1.08} width={a.rightX - xMin + 2} height={a.size * 1.38} fill="#fff" />
+              <text x={a.rightX} y={a.baseY} textAnchor="end" fontSize={a.size} fill={c} fontWeight={a.bold ? 700 : 400} fontFamily="Helvetica, Arial, sans-serif">{a.text}</text>
+              {selBox}
+            </g>
+          );
+        }
+        const linesOv = wrapToWidth(
+          a.text,
+          a.w + 4,
+          (w) => measureText(w, a.size, a.bold),
+          measureText(" ", a.size, a.bold)
+        );
+        return (
+          <g key={a.id}>
+            <rect x={a.x - 1} y={a.baseY - a.size * 1.08} width={a.w + 2} height={a.size * 1.38} fill="#fff" />
+            {linesOv.map((l, i) => (
+              <text key={i} x={a.x} y={a.baseY + i * a.size * 1.2} fontSize={a.size} fill={c} fontWeight={a.bold ? 700 : 400} fontFamily="Helvetica, Arial, sans-serif">{l}</text>
+            ))}
+            {selBox}
+          </g>
+        );
+      }
     }
   };
 
   return (
     <div
       className="relative border border-line bg-white shadow-sm"
-      style={{ width: dims?.w ?? PAGE_W, height: dims?.h ?? PAGE_W * 1.3, touchAction: "none", cursor: tool === "select" ? "default" : "crosshair" }}
+      style={{ width: dims?.w ?? PAGE_W, height: dims?.h ?? PAGE_W * 1.3, touchAction: "none", cursor: tool === "select" ? "default" : tool === "editText" ? "text" : "crosshair" }}
       onPointerDown={(e) => onPointerDown(e, page)}
       onPointerMove={(e) => onPointerMove(e, page)}
       onPointerUp={onPointerUp}
@@ -444,4 +529,55 @@ function PageCanvas({
       </svg>
     </div>
   );
+}
+
+// Canvas text measurement for the overlay (approximates Helvetica metrics).
+let measureCtx: CanvasRenderingContext2D | null = null;
+function measureText(t: string, size: number, bold: boolean): number {
+  if (!measureCtx) measureCtx = document.createElement("canvas").getContext("2d");
+  if (!measureCtx) return t.length * size * 0.5;
+  measureCtx.font = `${bold ? "bold " : ""}${size}px Helvetica, Arial, sans-serif`;
+  return measureCtx.measureText(t).width;
+}
+
+// Hit-test an extracted source line (its date piece wins when both overlap).
+function hitLine(lines: EditableLine[], page: number, x: number, y: number): { x: number; baseY: number; w: number; size: number; bold: boolean; text: string; rightX?: number } | null {
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const l = lines[i];
+    if (l.page !== page) continue;
+    if (l.date && x >= l.date.x - 3 && x <= l.date.x + l.date.w + 3 && y >= l.baseY - l.size * 1.1 && y <= l.baseY + l.size * 0.35) {
+      return { x: l.date.x, baseY: l.baseY, w: l.date.w, size: l.size, bold: l.date.bold, text: l.date.text, rightX: l.date.x + l.date.w };
+    }
+    if (x >= l.x - 3 && x <= l.x + l.w + 3 && y >= l.baseY - l.size * 1.1 && y <= l.baseY + l.size * 0.35) {
+      return { x: l.x, baseY: l.baseY, w: l.w, size: l.size, bold: l.bold, text: l.text };
+    }
+  }
+  return null;
+}
+
+// Guess the source text color by averaging the dark pixels in the line box.
+function sampleTextColor(canvas: HTMLCanvasElement | null, x: number, baseY: number, w: number, size: number): string {
+  if (!canvas) return "#1e293b";
+  try {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return "#1e293b";
+    const sx = Math.max(0, Math.round(x));
+    const sy = Math.max(0, Math.round(baseY - size * 1.1));
+    const sw = Math.min(canvas.width - sx, Math.round(w));
+    const sh = Math.min(canvas.height - sy, Math.round(size * 1.4));
+    if (sw <= 0 || sh <= 0) return "#1e293b";
+    const data = ctx.getImageData(sx, sy, sw, sh).data;
+    let r = 0, g = 0, b = 0, n = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      if (data[i + 3] > 200 && lum < 110) {
+        r += data[i]; g += data[i + 1]; b += data[i + 2]; n++;
+      }
+    }
+    if (n < 8) return "#1e293b";
+    const hex = (v: number) => Math.round(v / n).toString(16).padStart(2, "0");
+    return `#${hex(r)}${hex(g)}${hex(b)}`;
+  } catch {
+    return "#1e293b";
+  }
 }

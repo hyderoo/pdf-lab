@@ -486,3 +486,148 @@ export async function extractBlocks(
     },
   };
 }
+
+// One editable visual line of source text (CSS pixel space of the editor
+// canvas, y down). `baseY` is the text baseline. A wide right-hand column
+// (usually a date) is split off as `date` with its own x so each piece can
+// be edited independently.
+export type EditableLine = {
+  page: number;
+  x: number;
+  baseY: number;
+  w: number;
+  size: number;
+  text: string;
+  bold: boolean;
+  date?: { x: number; w: number; text: string; bold: boolean };
+};
+
+export async function extractTextLines(
+  doc: PDFDocumentProxy,
+  scales: Record<number, number>,
+  raw?: ArrayBuffer
+): Promise<EditableLine[]> {
+  const baseBold = raw ? scanBaseFontBold(raw) : null;
+  const fontRefs: string[] = [];
+  const fontState = new Map<string, boolean | undefined>();
+  type It = { str: string; x: number; y: number; h: number; w: number; fontName: string };
+  const pagesItems: It[][] = [];
+  const pageHeights: number[] = [];
+
+  // Pass 1: items + font info.
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    await page.getOperatorList();
+    const vp = page.getViewport({ scale: 1 });
+    pageHeights.push(vp.height);
+    const content = await page.getTextContent();
+    const items: It[] = [];
+    for (const it of content.items) {
+      if (!("str" in it)) continue;
+      const str = cleanGlyphs(it.str);
+      if (!str.trim()) continue;
+      const x = it.transform[4];
+      const y = it.transform[5];
+      const h = Math.abs(it.transform[3]) || Math.abs(it.transform[0]) || 10;
+      items.push({ str, x, y, h, w: it.width || str.length * h * 0.5, fontName: it.fontName });
+      if (it.fontName && !fontState.has(it.fontName)) {
+        fontRefs.push(it.fontName);
+        let b: boolean | undefined;
+        try {
+          const f = (await page.commonObjs.get(it.fontName)) as
+            | { bold?: boolean; black?: boolean; loadedName?: string }
+            | undefined;
+          if (typeof f?.bold === "boolean" || typeof f?.black === "boolean") b = Boolean(f?.bold || f?.black);
+          else if (f?.loadedName && /bold|black|semibold|demi|heavy/i.test(f.loadedName)) b = true;
+        } catch {
+          b = undefined;
+        }
+        fontState.set(it.fontName, b);
+      }
+    }
+    pagesItems.push(items);
+  }
+  const anyKnown = [...fontState.values()].some((v) => v !== undefined);
+  const fontBold = new Map<string, boolean>();
+  fontRefs.forEach((ref, idx) => {
+    const known = fontState.get(ref);
+    fontBold.set(ref, known ?? (baseBold && baseBold.length === fontRefs.length ? baseBold[idx] : false));
+  });
+
+  // Pass 2: rows -> editable lines in CSS pixel space.
+  const out: EditableLine[] = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    type Part = { x: number; w: number; str: string; bold: boolean };
+    type Row = { y: number; h: number; parts: Part[] };
+    const rows: Row[] = [];
+    for (const it of pagesItems[i - 1]) {
+      const bold = fontBold.get(it.fontName) ?? false;
+      let row = rows[rows.length - 1];
+      if (!row || Math.abs(row.y - it.y) > Math.max(2, row.h * 0.4)) {
+        row = { y: it.y, h: it.h, parts: [] };
+        rows.push(row);
+      }
+      if (it.h > row.h) row.h = it.h;
+      row.parts.push({ x: it.x, w: it.w, str: it.str, bold });
+    }
+    const S = scales[i] ?? 1;
+    const userH = pageHeights[i - 1];
+    for (const r of rows) {
+      r.parts.sort((a, b) => a.x - b.x);
+      let splitAt = -1;
+      let prevEnd = -1;
+      for (let k = 0; k < r.parts.length; k++) {
+        const p = r.parts[k];
+        if (prevEnd >= 0 && p.x - prevEnd > r.h * 2.2) {
+          splitAt = k;
+          break;
+        }
+        prevEnd = p.x + p.w;
+      }
+      const join = (parts: Part[]): { text: string; bold: boolean } => {
+        let t = "";
+        let pe = -1;
+        let boldChars = 0;
+        for (const p of parts) {
+          const seg = p.str.replace(/[ \t]+/g, " ");
+          if (!seg.trim()) continue;
+          const gap = pe >= 0 ? p.x - pe : 0;
+          t += (t && gap > 1 && !t.endsWith(" ") && !seg.startsWith(" ") ? " " : "") + seg;
+          if (p.bold) boldChars += seg.trim().length;
+          pe = p.x + p.w;
+        }
+        t = t.trim();
+        return { text: t, bold: t.length > 0 && boldChars / t.length >= 0.6 };
+      };
+      const leftParts = splitAt >= 0 ? r.parts.slice(0, splitAt) : r.parts;
+      const left = join(leftParts);
+      if (!left.text) continue;
+      const lx = Math.min(...leftParts.map((p) => p.x));
+      const lw = Math.max(...leftParts.map((p) => p.x + p.w)) - lx;
+      const line: EditableLine = {
+        page: i,
+        x: lx * S,
+        baseY: (userH - r.y) * S,
+        w: lw * S,
+        size: r.h * S,
+        text: left.text,
+        bold: left.bold,
+      };
+      if (splitAt >= 0) {
+        const rightParts = r.parts.slice(splitAt);
+        const right = join(rightParts);
+        if (right.text) {
+          const dx = Math.min(...rightParts.map((p) => p.x));
+          line.date = {
+            x: dx * S,
+            w: (Math.max(...rightParts.map((p) => p.x + p.w)) - dx) * S,
+            text: right.text,
+            bold: right.bold,
+          };
+        }
+      }
+      out.push(line);
+    }
+  }
+  return out;
+}
