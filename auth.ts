@@ -4,9 +4,19 @@ import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { site } from "@/lib/site";
 import type { Provider } from "next-auth/providers";
 
+// Optional owner/testing allowlist: comma-separated exact emails accepted in
+// addition to the Undip domains. Undip domain rules stay unchanged.
+function extraAllowedEmails(): string[] {
+  return (process.env.EXTRA_ALLOWED_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 function isAllowedEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   const e = email.toLowerCase();
+  if (extraAllowedEmails().includes(e)) return true;
   return site.allowedDomains.some((d) => e.endsWith("@" + d));
 }
 

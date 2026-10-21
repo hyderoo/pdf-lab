@@ -63,6 +63,7 @@ Required env vars:
 - `AUTH_MICROSOFT_ENTRA_ID_ID` / `AUTH_MICROSOFT_ENTRA_ID_SECRET` - Entra → App registrations (accounts in any org directory). Redirect URI (Web): `https://<your-domain>/api/auth/callback/microsoft-entra-id`
 - `GEMINI_API_KEY` *(optional, enables AI tools)* - free key from [Google AI Studio](https://aistudio.google.com/apikey). The key stays server-side in `/api/ai`. Free-tier quotas apply (shown in AI Studio); on exhaustion the tools return a friendly "try again later".
 - `GEMINI_MODEL` *(optional)* - defaults to `gemini-3.5-flash-lite`
+- `EXTRA_ALLOWED_EMAILS` *(optional, owner/testing allowlist)* - comma-separated exact emails allowed to sign in on top of the Undip domains, e.g. `someone@gmail.com, other@gmail.com`. Matching is case-insensitive and exact (no domains). Undip domain rules are unchanged for everyone else; leave unset in normal use.
 
 ## License
 
