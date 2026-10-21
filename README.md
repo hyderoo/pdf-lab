@@ -1,5 +1,7 @@
 # PDF Lab — PDF tools for the Undip community
 
+**Live: https://pdflab-undip.vercel.app**
+
 A collection of PDF tools that run **entirely in your browser** — files are processed on your device and never uploaded to a server. Built by an Undip alumnus, for Undip students, staff, and alumni.
 
 ## Why it's different
