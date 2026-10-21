@@ -9,13 +9,23 @@ function isAllowedEmail(email: string | null | undefined): boolean {
   return site.allowedDomains.some((d) => e.endsWith("@" + d));
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [
-    Google,
+const providers = [Google];
+
+// Optional provider: only enabled when its env vars are set, so a partially
+// configured deployment (Google only) keeps working.
+if (
+  process.env.AUTH_MICROSOFT_ENTRA_ID_ID &&
+  process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET
+) {
+  providers.push(
     MicrosoftEntraID({
       issuer: "https://login.microsoftonline.com/common/v2.0",
-    }),
-  ],
+    })
+  );
+}
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  providers,
   pages: {
     signIn: "/masuk",
     error: "/masuk",
