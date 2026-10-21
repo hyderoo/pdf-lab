@@ -158,3 +158,138 @@ export function parsePageRange(input: string, max: number): number[] | null {
 export function baseName(name: string): string {
   return name.replace(/\.[^.]+$/, "");
 }
+
+export type TextBlock = {
+  kind: "name" | "heading" | "bullet" | "para";
+  text: string; // left/main text
+  date?: string; // right-aligned tail on the same visual row
+  size: number;
+  bold: boolean;
+  page: number;
+};
+
+// Extract structured blocks with position and style info, for the
+// translate-and-rerender pipeline.
+export async function extractBlocks(doc: PDFDocumentProxy): Promise<TextBlock[]> {
+  const blocks: TextBlock[] = [];
+  let globalIndex = 0;
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    // getOperatorList forces all referenced fonts to finish loading into
+    // commonObjs, otherwise commonObjs.get throws "not resolved yet".
+    await page.getOperatorList();
+    const content = await page.getTextContent();
+    // Resolve font objects for bold detection (FontFaceObject exposes
+    // prototype getters `bold` / `black` and a `loadedName` string).
+    const fontBold = new Map<string, boolean>();
+    for (const it of content.items) {
+      if ("str" in it && it.fontName && !fontBold.has(it.fontName)) {
+        try {
+          const f = (await page.commonObjs.get(it.fontName)) as
+            | { bold?: boolean; black?: boolean; loadedName?: string }
+            | undefined;
+          fontBold.set(
+            it.fontName,
+            Boolean(f?.bold || f?.black || /bold|black|semibold|demi/i.test(f?.loadedName ?? ""))
+          );
+        } catch {
+          fontBold.set(it.fontName, false);
+        }
+      }
+    }
+    type Row = { x: number; y: number; h: number; bold: boolean; parts: { x: number; str: string }[] };
+    const rows: Row[] = [];
+    for (const it of content.items) {
+      if (!("str" in it)) continue;
+      const str = cleanGlyphs(it.str);
+      if (!str.trim()) continue;
+      const x = it.transform[4];
+      const y = it.transform[5];
+      const h = Math.abs(it.transform[3]) || Math.abs(it.transform[0]) || 10;
+      const bold = fontBold.get(it.fontName) ?? false;
+      let row = rows[rows.length - 1];
+      if (!row || Math.abs(row.y - y) > Math.max(2, row.h * 0.4)) {
+        row = { x, y, h, bold, parts: [] };
+        rows.push(row);
+      }
+      if (h > row.h) row.h = h;
+      if (bold) row.bold = true;
+      row.parts.push({ x, str });
+    }
+    // Build per-row text; split left/right on large interior x-gaps.
+    type Line = { text: string; date?: string; x: number; y: number; h: number; bold: boolean; bullet: boolean };
+    const lines: Line[] = [];
+    for (const r of rows) {
+      r.parts.sort((a, b) => a.x - b.x);
+      let left = "";
+      let right = "";
+      let lastX = r.x;
+      let lastW = 0;
+      for (const p of r.parts) {
+        const gap = p.x - (lastX + lastW);
+        const seg = p.str.replace(/[ \t]+/g, " ").trim();
+        if (!seg) continue;
+        if (left && gap > r.h * 3 && !right) {
+          right = seg; // wide interior gap -> right column (usually dates)
+        } else if (right) {
+          right += " " + seg;
+        } else {
+          left += (left ? " " : "") + seg;
+        }
+        lastX = p.x;
+        lastW = p.str.length * r.h * 0.5; // rough width estimate
+      }
+      const bullet = /^[-*]\s+/.test(left);
+      lines.push({ text: left, date: right || undefined, x: r.x, y: r.y, h: r.h, bold: r.bold, bullet });
+    }
+    // Merge wrapped lines into blocks.
+    for (const ln of lines) {
+      const prev = blocks[blocks.length - 1];
+      const sameBlock =
+        prev &&
+        prev.page === i &&
+        !ln.bullet &&
+        !ln.date &&
+        !prev.date &&
+        Math.abs(prev.size - ln.h) / Math.max(prev.size, ln.h) <= 0.15 &&
+        Math.abs(ln.x - prevX(prev)) < 20 &&
+        prev.kind !== "name" &&
+        prev.kind !== "heading" &&
+        prevYGap(prev, ln) <= ln.h * 1.6;
+      if (sameBlock) {
+        prev.text += " " + ln.text;
+      } else {
+        blocks.push({
+          kind: ln.bullet ? "bullet" : "para",
+          text: ln.bullet ? ln.text.replace(/^[-*]\s+/, "") : ln.text,
+          date: ln.date,
+          size: ln.h,
+          bold: ln.bold,
+          page: i,
+        });
+        (blocks[blocks.length - 1] as unknown as { _x: number })._x = ln.x;
+        (blocks[blocks.length - 1] as unknown as { _y: number })._y = ln.y;
+      }
+      globalIndex++;
+    }
+  }
+  // Classify name/headings.
+  const bodySize =
+    blocks.map((b) => b.size).sort((a, b) => a - b)[Math.floor(blocks.length / 2)] || 11;
+  blocks.forEach((b, idx) => {
+    const short = b.text.length <= 60;
+    const letters = b.text.replace(/[^A-Za-z]/g, "");
+    const caps = letters.length >= 3 && b.text === b.text.toUpperCase();
+    if (idx === 0 && short && b.size >= bodySize) b.kind = "name";
+    else if (b.kind === "para" && !b.date && short && (caps || b.bold)) b.kind = "heading";
+    void globalIndex;
+  });
+  return blocks;
+}
+function prevX(b: TextBlock): number {
+  return (b as unknown as { _x?: number })._x ?? 0;
+}
+function prevYGap(prev: TextBlock, ln: { y: number }): number {
+  const py = (prev as unknown as { _y?: number })._y ?? ln.y;
+  return Math.abs(py - ln.y);
+}

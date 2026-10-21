@@ -135,3 +135,119 @@ export async function textToPdf(title: string | null, body: string): Promise<Blo
   const bytes = await doc.save();
   return new Blob([bytes as BlobPart], { type: "application/pdf" });
 }
+
+import type { TextBlock } from "./pdf";
+
+// Re-render translated blocks with the source's visual structure:
+// sizes, bold, bullets, right-aligned dates, heading rules, original page
+// size. Auto-shrinks (max 2 steps) so a 1-page source stays 1 page.
+export async function blocksToPdf(
+  blocks: TextBlock[],
+  srcPage: { width: number; height: number },
+  srcMargin: number
+): Promise<Blob> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const pw = srcPage.width;
+  const ph = srcPage.height;
+  const margin = Math.min(Math.max(srcMargin, 36), 80);
+  const maxW = pw - margin * 2;
+  const ink = rgb(0.15, 0.17, 0.2);
+  const dark = rgb(0.1, 0.12, 0.16);
+  const clean = (s: string) => s.replace(/[^\x20-\x7E\xC0-\xFF]/g, " ").replace(/[ \t]+/g, " ");
+
+  const srcPages = Math.max(...blocks.map((b) => b.page), 1);
+
+  const layout = (scale: number): number => {
+    let pages = 1;
+    let y = ph - margin;
+    for (const b of blocks) {
+      const size = Math.max(8, b.size * scale);
+      const lh = size * 1.35;
+      const f = b.bold || b.kind === "name" || b.kind === "heading" ? bold : font;
+      const indent = b.kind === "bullet" ? 14 : 0;
+      const gapBefore = b.kind === "heading" ? size * 0.7 : 0;
+      const lines = wrapInto(clean(b.text), size, f, maxW - indent);
+      const need = gapBefore + lines.length * lh + (b.kind === "heading" ? 6 : 0) + size * 0.25;
+      if (y - need < margin) {
+        pages++;
+        y = ph - margin;
+      }
+      y -= need;
+    }
+    return pages;
+  };
+
+  const wrapInto = (text: string, size: number, f: PDFFont, width: number): string[] => {
+    const out: string[] = [];
+    let line = "";
+    for (const word of text.split(" ")) {
+      const test = line ? `${line} ${word}` : word;
+      if (f.widthOfTextAtSize(test, size) > width && line) {
+        out.push(line);
+        line = word;
+      } else line = test;
+    }
+    if (line) out.push(line);
+    return out;
+  };
+
+  let scale = 1;
+  for (const cand of [1, 0.92, 0.85]) {
+    scale = cand;
+    if (layout(cand) <= srcPages) break;
+  }
+
+  let page: PDFPage = doc.addPage([pw, ph]);
+  let curSrc = 1;
+  let y = ph - margin;
+  for (const b of blocks) {
+    const size = Math.max(8, b.size * scale);
+    const lh = size * 1.35;
+    const isHead = b.kind === "name" || b.kind === "heading";
+    const f = b.bold || isHead ? bold : font;
+    const indent = b.kind === "bullet" ? 14 : 0;
+    const gapBefore = b.kind === "heading" ? size * 0.7 : 0;
+    while (b.page > curSrc) {
+      page = doc.addPage([pw, ph]);
+      y = ph - margin;
+      curSrc++;
+    }
+    const lines = wrapInto(clean(b.text), size, f, maxW - indent);
+    if (y - (gapBefore + lh) < margin) {
+      page = doc.addPage([pw, ph]);
+      y = ph - margin;
+    }
+    y -= gapBefore;
+    for (let i = 0; i < lines.length; i++) {
+      if (y < margin + lh) {
+        page = doc.addPage([pw, ph]);
+        y = ph - margin;
+      }
+      if (b.kind === "bullet" && i === 0) {
+        page.drawText("-", { x: margin, y: y - size, size, font: bold, color: ink });
+      }
+      page.drawText(lines[i], { x: margin + indent, y: y - size, size, font: f, color: isHead ? dark : ink });
+      if (i === 0 && b.date) {
+        const d = clean(b.date);
+        const w = font.widthOfTextAtSize(d, size);
+        page.drawText(d, { x: pw - margin - w, y: y - size, size, font, color: ink });
+      }
+      y -= lh;
+    }
+    if (b.kind === "heading") {
+      page.drawLine({
+        start: { x: margin, y: y + size * 0.35 },
+        end: { x: margin + maxW, y: y + size * 0.35 },
+        thickness: 0.6,
+        color: rgb(0.8, 0.82, 0.85),
+      });
+      y -= 6;
+    }
+    y -= size * 0.25;
+  }
+
+  const bytes = await doc.save();
+  return new Blob([bytes as BlobPart], { type: "application/pdf" });
+}
