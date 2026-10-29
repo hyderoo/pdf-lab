@@ -10,6 +10,17 @@
       ],
       "destination": "https://pdflab.web.id/:path*",
       "permanent": true
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "pdflab-undip.vercel.app"
+        }
+      ],
+      "destination": "https://pdflab.web.id",
+      "permanent": true
     }
   ]
 }
