@@ -18,6 +18,8 @@ export const metadata: Metadata = {
     template: `%s · ${site.name}`,
   },
   description: site.description,
+  metadataBase: new URL("https://pdflab.web.id"),
+  alternates: { canonical: "/" },
 };
 
 async function Header() {

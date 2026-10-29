@@ -1,0 +1,15 @@
+{
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "pdflab-undip.vercel.app"
+        }
+      ],
+      "destination": "https://pdflab.web.id/:path*",
+      "permanent": true
+    }
+  ]
+}
