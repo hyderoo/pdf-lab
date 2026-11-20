@@ -16,6 +16,7 @@ import {
   Droplet,
   Minimize2,
   Clapperboard,
+  Scissors,
   type LucideIcon,
 } from "lucide-react";
 
@@ -155,6 +156,14 @@ export const tools: Tool[] = [
     description:
       "Kecilkan ukuran video (MP4, WebM, MOV) langsung di browser. Hasilnya MP4 yang bisa diputar di mana saja.",
     icon: Clapperboard,
+    category: "Video",
+  },
+  {
+    slug: "potong-video",
+    title: "Potong Video",
+    description:
+      "Potong video dari waktu mulai sampai akhir, sampai milidetik, langsung di browser. Hasil bisa MP4 presisi atau potongan cepat.",
+    icon: Scissors,
     category: "Video",
   },
   {
