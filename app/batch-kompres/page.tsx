@@ -5,7 +5,8 @@ import JSZip from "jszip";
 import ToolShell from "@/components/ToolShell";
 import FileDrop from "@/components/FileDrop";
 import { PrimaryButton, SecondaryButton, ResultCard, ErrorNote, FieldLabel, Select, TextInput } from "@/components/ui";
-import { loadPdfJsDoc, downloadBlob, formatBytes, baseName } from "@/lib/pdf";
+import { buildDocx } from "@/lib/docx";
+import { loadPdfJsDoc, extractAllText, downloadBlob, formatBytes, baseName } from "@/lib/pdf";
 import { loadBitmap, compressPhoto, compressPdfToTarget } from "@/lib/compress";
 
 type Row = { name: string; status: "ok" | "warn" | "fail"; text: string };
@@ -13,6 +14,7 @@ type Row = { name: string; status: "ok" | "warn" | "fail"; text: string };
 export default function BatchKompres() {
   const [files, setFiles] = useState<File[]>([]);
   const [kind, setKind] = useState("foto");
+  const [action, setAction] = useState("kompres");
   const [targetVal, setTargetVal] = useState("200");
   const [targetUnit, setTargetUnit] = useState("KB");
   const [busy, setBusy] = useState(false);
@@ -35,7 +37,7 @@ export default function BatchKompres() {
   };
 
   const run = async () => {
-    const v = parseFloat(targetVal.replace(",", "."));
+    const v = action === "word" && kind === "pdf" ? 1 : parseFloat(targetVal.replace(",", "."));
     if (!isFinite(v) || v <= 0) { setError("Isi ukuran maksimal dengan angka lebih dari 0."); return; }
     const target = Math.round(v * (targetUnit === "MB" ? 1e6 : 1000));
     setBusy(true);
@@ -50,7 +52,14 @@ export default function BatchKompres() {
         const f = files[i];
         setProgress(`Memproses ${i + 1} dari ${files.length}: ${f.name}`);
         try {
-          if (kind === "pdf") {
+          if (kind === "pdf" && action === "word") {
+            const doc = await loadPdfJsDoc(await f.arrayBuffer());
+            const pages = await extractAllText(doc);
+            const chars = pages.join("").replace(/\s/g, "").length;
+            if (chars < 20 * doc.numPages) { out.push({ name: f.name, status: "fail", text: "hampir tidak ada teks (kemungkinan scan), jalankan OCR PDF dulu" }); setRows([...out]); continue; }
+            z.file(uniq(`${baseName(f.name)}.docx`), await buildDocx(pages));
+            out.push({ name: f.name, status: "ok", text: `${doc.numPages} halaman diubah ke Word (teks saja)` });
+          } else if (kind === "pdf") {
             const doc = await loadPdfJsDoc(await f.arrayBuffer());
             if (f.size <= target) { z.file(uniq(f.name), f); out.push({ name: f.name, status: "ok", text: `${formatBytes(f.size)}, sudah di bawah target (tidak diubah)` }); continue; }
             const r = await compressPdfToTarget(doc, target);
@@ -81,7 +90,7 @@ export default function BatchKompres() {
   return (
     <ToolShell
       title="Kompres Massal"
-      description="Kompres banyak foto atau banyak PDF sekaligus ke ukuran target, hasilnya satu berkas ZIP. Semua diproses di browser."
+      description="Kompres banyak foto atau banyak PDF sekaligus ke ukuran target, atau ubah banyak PDF berteks ke Word. Hasilnya satu berkas ZIP, semua diproses di browser."
     >
       {files.length === 0 ? (
         <FileDrop accept="image/jpeg,image/png,image/webp,image/heic,.heic,application/pdf" multiple onFiles={onFiles} label="Pilih banyak foto atau banyak PDF" hint="Satu jenis saja per proses: semua foto, atau semua PDF." />
@@ -89,6 +98,16 @@ export default function BatchKompres() {
         <>
           <p className="mb-4 text-sm text-slate-600">{files.length} {kind === "pdf" ? "PDF" : "foto"} · {formatBytes(files.reduce((a, f) => a + f.size, 0))}</p>
           <div className="mb-4 grid max-w-md gap-4 sm:grid-cols-2">
+            {kind === "pdf" && (
+              <div className="sm:col-span-2">
+                <FieldLabel>Aksi</FieldLabel>
+                <Select value={action} onChange={(e) => setAction(e.target.value)}>
+                  <option value="kompres">Kompres ke ukuran target</option>
+                  <option value="word">Ubah ke Word (.docx, PDF berteks saja)</option>
+                </Select>
+              </div>
+            )}
+            {(kind !== "pdf" || action === "kompres") && (<>
             <div>
               <FieldLabel>Ukuran maksimal per berkas</FieldLabel>
               <TextInput value={targetVal} onChange={(e) => setTargetVal(e.target.value)} inputMode="decimal" />
@@ -100,6 +119,7 @@ export default function BatchKompres() {
                 <option value="MB">MB</option>
               </Select>
             </div>
+            </>)}
           </div>
           <div className="flex items-center gap-3">
             <PrimaryButton onClick={run} busy={busy}>Kompres semua</PrimaryButton>
