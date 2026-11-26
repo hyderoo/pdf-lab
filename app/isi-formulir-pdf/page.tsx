@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PDFDocument, PDFTextField, PDFCheckBox, PDFDropdown, PDFRadioGroup, PDFOptionList } from "pdf-lib";
+import { PDFNull, PDFRef, PDFDocument, PDFTextField, PDFCheckBox, PDFDropdown, PDFRadioGroup, PDFOptionList } from "pdf-lib";
 import ToolShell from "@/components/ToolShell";
 import FileDrop from "@/components/FileDrop";
 import { PrimaryButton, SecondaryButton, ResultCard, ErrorNote, FieldLabel, TextInput, Select } from "@/components/ui";
@@ -91,6 +91,12 @@ export default function IsiFormulirPdf() {
         const clean = await PDFDocument.create();
         const pages = await clean.copyPages(flat, flat.getPageIndices());
         pages.forEach((pg) => clean.addPage(pg));
+        // fill object-number gaps with nulls so the xref table is one contiguous block (poppler rejects split tables)
+        const ctx = clean.context;
+        for (let n = 1; n <= ctx.largestObjectNumber; n++) {
+          const ref = PDFRef.of(n);
+          if (!ctx.lookup(ref)) ctx.assign(ref, PDFNull);
+        }
         bytes = await clean.save({ useObjectStreams: false });
       }
       setResult({
