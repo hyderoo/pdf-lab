@@ -66,6 +66,8 @@ export default function IsiFormulirPdf() {
         try {
           if (f.kind === "text") {
             const tf = form.getTextField(f.name);
+            // auto font size on multiline fields renders huge text when flattened; use a fixed size
+            if (tf.isMultiline() && f.value) tf.setFontSize(11);
             if (f.value) tf.setText(f.value); else tf.setText(undefined);
           } else if (f.kind === "check") {
             const cb = form.getCheckBox(f.name);
@@ -82,7 +84,7 @@ export default function IsiFormulirPdf() {
         }
       }
       if (flatten) form.flatten();
-      const bytes = await doc.save();
+      const bytes = await doc.save({ useObjectStreams: false });
       setResult({
         blob: new Blob([bytes as BlobPart], { type: "application/pdf" }),
         name: `${baseName(file.name)}-terisi.pdf`,
