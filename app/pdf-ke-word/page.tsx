@@ -59,6 +59,10 @@ export default function PdfKeWord() {
       const doc = await loadPdfJsDoc(await file.arrayBuffer());
       const pages = await extractAllText(doc);
       const chars = pages.join("").replace(/\s/g, "").length;
+      if (chars < 20 * doc.numPages) {
+        setError("Hampir tidak ada teks di PDF ini, kemungkinan hasil scan. PDF ke Word belum membaca gambar. Jalankan OCR PDF (/ocr-pdf) dulu, lalu ubah hasil OCR-nya ke Word.");
+        return;
+      }
       const blob = await buildDocx(pages);
       setResult({
         blob,
