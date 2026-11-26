@@ -24,6 +24,8 @@ import {
   AudioLines,
   VolumeX,
   RefreshCw,
+  FileText,
+  FormInput,
   type LucideIcon,
 } from "lucide-react";
 
@@ -225,6 +227,22 @@ export const tools: Tool[] = [
     description: "Ubah video MOV, WebM, MKV, atau AVI menjadi MP4 (H.264/AAC) yang bisa diputar di mana saja.",
     icon: RefreshCw,
     category: "Video",
+  },
+  {
+    slug: "pdf-ke-word",
+    title: "PDF ke Word",
+    description:
+      "Ubah teks PDF menjadi dokumen Word (.docx) yang bisa diedit. Hasil aproksimasi: tanpa tabel, kolom, dan gambar.",
+    icon: FileText,
+    category: "Konversi dari PDF",
+  },
+  {
+    slug: "isi-formulir-pdf",
+    title: "Isi Formulir PDF",
+    description:
+      "Isi kolom formulir PDF asli (teks, centang, pilihan) lalu unduh, tanpa menimpa tampilan.",
+    icon: FormInput,
+    category: "Edit",
   },
   {
     slug: "kompres-pdf",
