@@ -17,6 +17,7 @@ import {
   Minimize2,
   Clapperboard,
   Scissors,
+  Film,
   type LucideIcon,
 } from "lucide-react";
 
@@ -156,6 +157,14 @@ export const tools: Tool[] = [
     description:
       "Kecilkan ukuran video (MP4, WebM, MOV) langsung di browser. Hasilnya MP4 yang bisa diputar di mana saja.",
     icon: Clapperboard,
+    category: "Video",
+  },
+  {
+    slug: "gabung-video",
+    title: "Gabung Video",
+    description:
+      "Gabungkan beberapa video menjadi satu MP4 sesuai urutan, langsung di browser. Video tidak pernah diunggah.",
+    icon: Film,
     category: "Video",
   },
   {
