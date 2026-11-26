@@ -21,6 +21,7 @@ export default function BatchKompres() {
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
+  const zipName = kind === "pdf" && action === "word" ? "pdf-ke-word.zip" : "kompres-massal.zip";
   const [zip, setZip] = useState<Blob | null>(null);
 
   const onFiles = (fs: File[]) => {
@@ -122,7 +123,7 @@ export default function BatchKompres() {
             </>)}
           </div>
           <div className="flex items-center gap-3">
-            <PrimaryButton onClick={run} busy={busy}>Kompres semua</PrimaryButton>
+            <PrimaryButton onClick={run} busy={busy}>{kind === "pdf" && action === "word" ? "Ubah semua ke Word" : "Kompres semua"}</PrimaryButton>
             <SecondaryButton onClick={() => { setFiles([]); setRows([]); setZip(null); setError(""); }}>Ganti berkas</SecondaryButton>
           </div>
           {progress && <p className="mt-3 text-xs text-slate-500">{progress}</p>}
@@ -138,7 +139,7 @@ export default function BatchKompres() {
           ))}
         </ul>
       )}
-      {zip && <ResultCard filename="kompres-massal.zip" sizeLabel={formatBytes(zip.size)} note={`${rows.filter((r) => r.status !== "fail").length} dari ${rows.length} berkas masuk ZIP.`} onDownload={() => downloadBlob(zip, "kompres-massal.zip")} />}
+      {zip && <ResultCard filename={zipName} sizeLabel={formatBytes(zip.size)} note={`${rows.filter((r) => r.status !== "fail").length} dari ${rows.length} berkas masuk ZIP.`} onDownload={() => downloadBlob(zip, zipName)} />}
     </ToolShell>
   );
 }

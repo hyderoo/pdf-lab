@@ -84,7 +84,15 @@ export default function IsiFormulirPdf() {
         }
       }
       if (flatten) form.flatten();
-      const bytes = await doc.save({ useObjectStreams: false });
+      let bytes = await doc.save({ useObjectStreams: false });
+      if (flatten) {
+        // rebuild into a clean document so no orphaned form objects leave xref warnings
+        const flat = await PDFDocument.load(bytes);
+        const clean = await PDFDocument.create();
+        const pages = await clean.copyPages(flat, flat.getPageIndices());
+        pages.forEach((pg) => clean.addPage(pg));
+        bytes = await clean.save({ useObjectStreams: false });
+      }
       setResult({
         blob: new Blob([bytes as BlobPart], { type: "application/pdf" }),
         name: `${baseName(file.name)}-terisi.pdf`,
