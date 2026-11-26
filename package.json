@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@neslinesli93/qpdf-wasm": "^0.3.1",
     "heic2any": "^0.0.4",
     "jszip": "^3.10.2",
     "lucide-react": "^1.60.0",

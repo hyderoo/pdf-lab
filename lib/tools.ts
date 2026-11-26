@@ -27,6 +27,7 @@ import {
   FileText,
   FormInput,
   EyeOff,
+  Lock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -252,6 +253,14 @@ export const tools: Tool[] = [
       "Tutup NIK, alamat, atau teks sensitif dengan kotak hitam permanen. Teks di bawah kotak benar-benar dihapus, bukan hanya ditutup.",
     icon: EyeOff,
     category: "Edit",
+  },
+  {
+    slug: "password-pdf",
+    title: "Password PDF",
+    description:
+      "Kunci PDF dengan password (AES-256) atau hapus password dari PDF yang kamu tahu passwordnya.",
+    icon: Lock,
+    category: "Halaman",
   },
   {
     slug: "kompres-pdf",
