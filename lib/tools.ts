@@ -26,6 +26,7 @@ import {
   RefreshCw,
   FileText,
   FormInput,
+  EyeOff,
   type LucideIcon,
 } from "lucide-react";
 
@@ -242,6 +243,14 @@ export const tools: Tool[] = [
     description:
       "Isi kolom formulir PDF asli (teks, centang, pilihan) lalu unduh, tanpa menimpa tampilan.",
     icon: FormInput,
+    category: "Edit",
+  },
+  {
+    slug: "sensor-pdf",
+    title: "Sensor PDF",
+    description:
+      "Tutup NIK, alamat, atau teks sensitif dengan kotak hitam permanen. Teks di bawah kotak benar-benar dihapus, bukan hanya ditutup.",
+    icon: EyeOff,
     category: "Edit",
   },
   {

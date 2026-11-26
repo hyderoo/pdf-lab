@@ -300,6 +300,7 @@ export default function EditPdf() {
           <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
             Anotasi digambar di atas isi PDF. Dengan alur "Edit teks", baris teks asli bisa diganti: klik barisnya,
             ketik penggantinya, lalu teks lama ditimpa whiteout dan teks baru digambar di posisi yang sama. Bentuk huruf bisa sedikit berbeda dari font asli.
+            <strong className="mt-1 block">Whiteout dan Edit teks hanya menutupi tampilan: teks aslinya masih ada di dalam file dan bisa disalin. Untuk menyembunyikan data sensitif (NIK, alamat), pakai <a href="/sensor-pdf" className="underline">Sensor PDF</a>.</strong>
           </div>
 
           <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-center gap-1.5 rounded-lg border border-line bg-white p-2 shadow-sm">
