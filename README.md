@@ -30,6 +30,7 @@ Most PDF sites upload your documents to their servers. PDF Lab does everything c
 - Redact PDF - permanent black boxes: redacted pages are rasterized so the text underneath is gone (unlike the Edit PDF whiteout, which only covers it)
 
 **Pages**
+- Batch compress - many photos or PDFs to a target size, ZIP output
 - Password PDF - lock (AES-256) or unlock with qpdf compiled to WASM
 - Merge, Split (ranges / every page / extract), Rotate (90/180/270, all or selected)
 - Arrange pages - reorder, delete, duplicate, insert blank pages via thumbnails

@@ -28,6 +28,7 @@ import {
   FormInput,
   EyeOff,
   Lock,
+  Layers,
   type LucideIcon,
 } from "lucide-react";
 
@@ -261,6 +262,14 @@ export const tools: Tool[] = [
       "Kunci PDF dengan password (AES-256) atau hapus password dari PDF yang kamu tahu passwordnya.",
     icon: Lock,
     category: "Halaman",
+  },
+  {
+    slug: "batch-kompres",
+    title: "Kompres Massal",
+    description:
+      "Kompres banyak foto atau banyak PDF sekaligus ke ukuran target, hasilnya satu ZIP.",
+    icon: Layers,
+    category: "Gambar",
   },
   {
     slug: "kompres-pdf",
