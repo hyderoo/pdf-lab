@@ -18,6 +18,12 @@ import {
   Clapperboard,
   Scissors,
   Film,
+  Image as ImageIcon,
+  FileSearch,
+  Sticker,
+  AudioLines,
+  VolumeX,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,7 +32,7 @@ export type Tool = {
   title: string;
   description: string;
   icon: LucideIcon;
-  category: "Analisis" | "Edit" | "Konversi ke PDF" | "Konversi dari PDF" | "Halaman" | "Video";
+  category: "Analisis" | "Edit" | "Konversi ke PDF" | "Konversi dari PDF" | "Halaman" | "Gambar" | "Video";
   ai?: boolean;
 };
 
@@ -176,10 +182,55 @@ export const tools: Tool[] = [
     category: "Video",
   },
   {
+    slug: "ocr-pdf",
+    title: "OCR PDF",
+    description:
+      "Ubah PDF scan atau foto dokumen menjadi PDF yang teksnya bisa dicari dan disalin, plus berkas teks. Mendukung bahasa Indonesia dan Inggris.",
+    icon: FileSearch,
+    category: "Konversi ke PDF",
+  },
+  {
+    slug: "kompres-foto",
+    title: "Kompres Foto",
+    description:
+      "Kecilkan foto (JPG, PNG, WebP, HEIC) sampai di bawah batas ukuran, misalnya maksimal 200 KB, untuk form upload.",
+    icon: ImageIcon,
+    category: "Gambar",
+  },
+  {
+    slug: "video-ke-gif",
+    title: "Video ke GIF / Stiker",
+    description:
+      "Pilih potongan video, crop kotak, lalu ekspor sebagai GIF atau stiker WhatsApp animasi (WebP 512x512).",
+    icon: Sticker,
+    category: "Video",
+  },
+  {
+    slug: "ekstrak-audio",
+    title: "Ekstrak Audio",
+    description: "Ambil suara dari video dan simpan sebagai MP3, M4A, atau WAV, langsung di browser.",
+    icon: AudioLines,
+    category: "Video",
+  },
+  {
+    slug: "mute-video",
+    title: "Mute Video",
+    description: "Hapus suara dari video tanpa encode ulang gambar, jadi cepat dan kualitas tetap.",
+    icon: VolumeX,
+    category: "Video",
+  },
+  {
+    slug: "konversi-video",
+    title: "Konversi ke MP4",
+    description: "Ubah video MOV, WebM, MKV, atau AVI menjadi MP4 (H.264/AAC) yang bisa diputar di mana saja.",
+    icon: RefreshCw,
+    category: "Video",
+  },
+  {
     slug: "kompres-pdf",
     title: "Kompres PDF",
     description:
-      "Kecilkan ukuran PDF dengan mengubah halaman menjadi gambar terkompresi. Teks hasilnya tidak bisa diseleksi.",
+      "Kecilkan ukuran PDF dengan mengubah halaman menjadi gambar terkompresi, atau pilih ukuran target (misalnya maksimal 200 KB). Teks hasilnya tidak bisa diseleksi.",
     icon: Minimize2,
     category: "Halaman",
   },
@@ -191,5 +242,6 @@ export const categories = [
   "Konversi ke PDF",
   "Konversi dari PDF",
   "Halaman",
+  "Gambar",
   "Video",
 ] as const;

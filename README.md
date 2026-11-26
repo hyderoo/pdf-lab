@@ -16,6 +16,7 @@ Most PDF sites upload your documents to their servers. PDF Lab does everything c
 - Translate PDF (AI) - Indonesian ↔ English, downloadable as PDF
 
 **Convert to PDF**
+- OCR PDF - make scanned PDFs/photos searchable (Tesseract, Indonesian + English, self-hosted), plus plain-text export
 - Images to PDF - JPG/PNG/WebP/HEIC, ordering, A4/fit sizing, margins
 - Scan to PDF - cleanup photos of paper (contrast stretch, whitened background)
 
@@ -29,7 +30,14 @@ Most PDF sites upload your documents to their servers. PDF Lab does everything c
 - Crop - draw an area, apply to one or all pages
 - Page numbers - format, position, starting number, page range
 - Watermark - text or image, opacity, rotation
-- Compress - rasterize pages to compressed JPEG (honest trade-off: text no longer selectable)
+- Compress - rasterize pages to compressed JPEG, by quality level or to a target size such as 200 KB (honest trade-off: text no longer selectable)
+
+**Images**
+- Compress photo - shrink JPG/PNG/WebP/HEIC under a size limit (e.g. 200 KB)
+
+**Video** (in-browser ffmpeg.wasm)
+- Video to GIF / WhatsApp sticker - trim, square crop, animated WebP 512x512 under 500 KB
+- Extract audio (MP3/M4A/WAV), Mute video, Convert to MP4
 
 ## Access
 
